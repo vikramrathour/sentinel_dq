@@ -1,22 +1,38 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Target, ShieldCheck, History } from 'lucide-react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Workflow as WorkflowIcon, LayoutDashboard, Target, ShieldCheck, History, Sparkles } from 'lucide-react';
 
 const Layout = () => {
+    const location = useLocation();
+    const isWorkflowPage = location.pathname === '/';
+
     const navItems = [
-        { path: '/', label: 'Overview', icon: LayoutDashboard },
+        { path: '/', label: 'Workflow', icon: WorkflowIcon },
+        { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/goals', label: 'AI Goals', icon: Target },
         { path: '/verify', label: 'Quality Gate', icon: ShieldCheck },
         { path: '/ledger', label: 'Audit Ledger', icon: History },
     ];
 
+    // If on workflow page, render without sidebar
+    if (isWorkflowPage) {
+        return <Outlet />;
+    }
+
     return (
-        <div className="flex h-screen bg-gray-100 font-sans text-gray-900">
+        <div className="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50 font-sans text-gray-900">
             {/* Sidebar */}
-            <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl">
-                <div className="p-6 border-b border-slate-700">
-                    <h1 className="text-2xl font-bold tracking-tight text-blue-400">Sentinel-DQ</h1>
-                    <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">Autonomous Trust Engine</p>
+            <aside className="w-72 bg-gradient-to-b from-[#1a1f3a] to-[#2d3561] text-white flex flex-col shadow-2xl">
+                <div className="p-6 border-b border-blue-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <Sparkles size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">Sentinel-DQ</h1>
+                        </div>
+                    </div>
+                    <p className="text-xs text-blue-200 uppercase tracking-widest">Powered by Xoriant ORIAN</p>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">
@@ -24,37 +40,47 @@ const Layout = () => {
                         <NavLink
                             key={item.path}
                             to={item.path}
+                            end={item.path === '/'}
                             className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+                                flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium
                                 ${isActive
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
-                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'}
+                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                    : 'text-blue-100 hover:bg-white/10 hover:text-white'}
                             `}
                         >
                             <item.icon size={20} />
-                            <span className="font-medium">{item.label}</span>
+                            <span>{item.label}</span>
                         </NavLink>
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-                    v1.0.0 • Connected
+                <div className="p-6 border-t border-blue-800/30">
+                    <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse"></span>
+                            <span className="text-xs font-semibold text-green-300">System Active</span>
+                        </div>
+                        <div className="text-xs text-blue-200">
+                            v1.0.0 • Enterprise Edition
+                        </div>
+                    </div>
                 </div>
             </aside>
 
             {/* Main Content */}
             <main className="flex-1 overflow-auto">
-                <header className="bg-white shadow h-16 flex items-center justify-between px-8 sticky top-0 z-10">
-                    <h2 className="text-lg font-semibold text-gray-700">Enterprise Data Quality Platform</h2>
+                <header className="bg-white/80 backdrop-blur-md shadow-sm h-16 flex items-center justify-between px-8 sticky top-0 z-10 border-b border-gray-200">
+                    <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">
+                        Autonomous Data Quality Platform
+                    </h2>
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-sm font-medium text-gray-600">System Active</span>
+                        <div className="text-xs text-gray-500">
+                            © 2026 Xoriant Corporation
                         </div>
                     </div>
                 </header>
 
-                <div className="p-8 max-w-7xl mx-auto">
+                <div className="p-8">
                     <Outlet />
                 </div>
             </main>
