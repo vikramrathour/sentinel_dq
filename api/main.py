@@ -9,8 +9,14 @@ from pathlib import Path
 from storage.persistence import METADATA_DIR
 from intelligence.impact_analyzer import DecisionImpactAnalyzer
 from backend.ledger import InferenceLedger
+from intelligence.kpi_monitor import KPIMonitor
+from api.governance import router as governance_router
 
-app = FastAPI(title="Sentinel-DQ Dashboard", version="1.0")
+app = FastAPI(
+    title="Sentinel-DQ Platform API",
+    version="2.0",
+    description="Enterprise Data Quality Management Platform - Aligned with W3C DQV, DAMA-DMBOK"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +25,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include governance router
+app.include_router(governance_router)
+
+# Initialize KPI monitor
+kpi_monitor = KPIMonitor()
 
 # --- Models ---
 class GoalInput(BaseModel):
@@ -174,6 +186,54 @@ def get_ledger_history(limit: int = 50):
                 
     # Return last N logs reversed (newest first)
     return logs[-limit:][::-1]
+
+# ==================== KPI & Monitoring Endpoints ====================
+
+@app.get("/kpis/current")
+def get_current_kpis():
+    """
+    Get current platform KPIs.
+    Aligned with W3C DQV, DAMA-DMBOK, and regulatory standards.
+    """
+    kpis = kpi_monitor.calculate_current_kpis()
+    return kpis.model_dump()
+
+@app.get("/kpis/trend")
+def get_kpi_trend(days: int = 30):
+    """
+    Get KPI trend over the last N days.
+    """
+    trend = kpi_monitor.get_kpi_trend(days=days)
+    return [kpi.model_dump() for kpi in trend]
+
+@app.get("/maturity")
+def get_maturity_level():
+    """
+    Get current DQ maturity level.
+    Levels: Reactive → Managed → Governed → Trusted → Intelligent
+    """
+    return kpi_monitor.get_maturity_level()
+
+@app.get("/metrics/domain")
+def get_domain_health():
+    """
+    Get average DQ score by business domain.
+    """
+    return kpi_monitor.get_domain_health()
+
+@app.get("/metrics/goals")
+def get_goal_metrics():
+    """
+    Get metrics broken down by quality goal (STANDARD, REGULATORY, AI).
+    """
+    return kpi_monitor.get_goal_metrics()
+
+@app.get("/metrics/prometheus")
+def get_prometheus_metrics():
+    """
+    Export metrics in Prometheus format for monitoring integration.
+    """
+    return kpi_monitor.export_prometheus_metrics()
 
 if __name__ == "__main__":
     import uvicorn
