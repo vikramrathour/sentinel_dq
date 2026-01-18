@@ -1,0 +1,9 @@
+{
+  "urn:goal:churn_prediction": {
+    "goal_id": "urn:goal:churn_prediction",
+    "target_kpis": {
+      "f1_score": 0.85
+    },
+    "dod_threshold": 0.9
+  }
+}

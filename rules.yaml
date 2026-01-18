@@ -1,0 +1,14 @@
+dataset_id: "urn:dcat:dataset:sales_data"
+rules:
+  - column: "order_id"
+    dimension: "Uniqueness"
+    type: "not_null"
+  - column: "email"
+    dimension: "Validity"
+    type: "regex_match"
+    pattern: "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$"
+  - column: "price"
+    dimension: "Validity"
+    type: "range"
+    min_value: 0.0
+    max_value: 1000000.0

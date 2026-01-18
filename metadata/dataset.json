@@ -1,0 +1,5 @@
+{
+  "identifier": "urn:dcat:dataset:sales_data",
+  "title": "Sales Data 2024",
+  "path": "/data/sales_2024.parquet"
+}

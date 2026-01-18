@@ -1,0 +1,9 @@
+pydantic
+pyyaml
+pandas
+networkx
+pyarrow
+typer
+fastapi
+uvicorn
+numpy
