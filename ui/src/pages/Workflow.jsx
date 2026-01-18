@@ -1023,11 +1023,37 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                     cdes: ['customer_id', 'email', 'purchase_amount', 'status']
                 })
             })
-            .then(res => res.json())
-            .then(data => setRuleExplanation(data))
-            .catch(err => console.error('Failed to load rule explanation:', err));
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`API error: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('Rule Explanation data:', data); // Debug log
+                setRuleExplanation(data);
+            })
+            .catch(err => {
+                console.error('Failed to load rule explanation:', err);
+                // Provide fallback data to prevent blank page
+                setRuleExplanation({
+                    total_rules_selected: rules.length,
+                    goal: 'STANDARD_DQ',
+                    selection_criteria: 'Unable to load explanation - service temporarily unavailable',
+                    selected_rules: rules.map(rule => ({
+                        rule_type: rule.type,
+                        column: rule.column,
+                        dimension: rule.dimension,
+                        reason: 'Explanation unavailable',
+                        explanation: 'Please try again later'
+                    })),
+                    not_applicable_rules: [],
+                    coverage_analysis: 'Unable to analyze coverage at this time',
+                    recommendations: ['Please try again later']
+                });
+            });
         }
-    }, [showRuleExplanations]);
+    }, [showRuleExplanations, rules]);
 
     const handleVerify = () => {
         setVerifying(true);
@@ -1080,7 +1106,7 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                         <div className="flex-1">
                             <h3 className="text-lg font-bold text-blue-900 mb-2">Why These Rules Were Selected</h3>
                             <p className="text-blue-800 text-sm mb-3">
-                                Based on your <strong>{ruleExplanation.goal}</strong> goal and selected CDEs, we applied <strong>{ruleExplanation.total_rules_selected} rules</strong>.
+                                Based on your <strong>{ruleExplanation.goal || 'STANDARD_DQ'}</strong> goal and selected CDEs, we applied <strong>{ruleExplanation.total_rules_selected || 0} rules</strong>.
                             </p>
                             {ruleExplanation.selection_criteria && (
                                 <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mb-3">
@@ -1097,20 +1123,24 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                                 Selected Rules ({ruleExplanation.selected_rules?.length || 0})
                             </div>
                             <ul className="text-sm space-y-3">
-                                {ruleExplanation.selected_rules?.map((rule, i) => (
-                                    <li key={i} className="bg-white rounded-lg p-3 border border-green-200">
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-green-600 font-bold">✓</span>
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-gray-900">{rule.rule_type || rule.type}</div>
-                                                <div className="text-xs text-blue-600 mt-1">
-                                                    Column: {rule.column} | Dimension: {rule.dimension}
+                                {ruleExplanation.selected_rules && ruleExplanation.selected_rules.length > 0 ? (
+                                    ruleExplanation.selected_rules.map((rule, i) => (
+                                        <li key={i} className="bg-white rounded-lg p-3 border border-green-200">
+                                            <div className="flex items-start gap-2">
+                                                <span className="text-green-600 font-bold">✓</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-900">{rule.rule_type || rule.type || 'Unknown'}</div>
+                                                    <div className="text-xs text-blue-600 mt-1">
+                                                        Column: {rule.column || 'N/A'} | Dimension: {rule.dimension || 'N/A'}
+                                                    </div>
+                                                    <div className="text-xs text-gray-700 mt-2">{rule.reason || rule.explanation || 'No explanation available'}</div>
                                                 </div>
-                                                <div className="text-xs text-gray-700 mt-2">{rule.reason || rule.explanation}</div>
                                             </div>
-                                        </div>
-                                    </li>
-                                ))}
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="text-gray-500 italic">No selected rules to display</li>
+                                )}
                             </ul>
                         </div>
 
@@ -1120,17 +1150,21 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                                 Not Applicable ({ruleExplanation.not_applicable_rules?.length || 0})
                             </div>
                             <ul className="text-sm space-y-3">
-                                {ruleExplanation.not_applicable_rules?.map((rule, i) => (
-                                    <li key={i} className="bg-white rounded-lg p-3 border border-gray-200">
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-gray-400 font-bold">✗</span>
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-gray-700">{rule.rule_type || rule.type}</div>
-                                                <div className="text-xs text-gray-600 mt-2">{rule.reason || rule.explanation}</div>
+                                {ruleExplanation.not_applicable_rules && ruleExplanation.not_applicable_rules.length > 0 ? (
+                                    ruleExplanation.not_applicable_rules.map((rule, i) => (
+                                        <li key={i} className="bg-white rounded-lg p-3 border border-gray-200">
+                                            <div className="flex items-start gap-2">
+                                                <span className="text-gray-400 font-bold">✗</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-700">{rule.rule_type || rule.type || 'Unknown'}</div>
+                                                    <div className="text-xs text-gray-600 mt-2">{rule.reason || rule.explanation || 'No explanation available'}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </li>
-                                ))}
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="text-gray-500 italic">All applicable rules were selected</li>
+                                )}
                             </ul>
                         </div>
                     </div>
