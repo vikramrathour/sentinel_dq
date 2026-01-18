@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Upload, Brain, CheckSquare, Eye, Download, ChevronRight, CheckCircle, Info, HelpCircle, Lightbulb } from 'lucide-react';
+import { Target, Upload, Brain, CheckSquare, Eye, Download, ChevronRight, CheckCircle, Info, HelpCircle, Lightbulb, Network, X } from 'lucide-react';
 
 const Workflow = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [workflowData, setWorkflowData] = useState({
         goal: { id: '', description: '', threshold: 0.95 },
-        dataset: null,
+        datasets: [],  // Changed from dataset to datasets (array)
         analysis: null,
+        trustGraph: null,  // Added for knowledge graph
         cdes: [],
         rules: [],
         verification: null
@@ -16,9 +17,10 @@ const Workflow = () => {
         { id: 1, name: 'Define Goal', icon: Target, color: 'from-blue-600 to-blue-700' },
         { id: 2, name: 'Upload Dataset', icon: Upload, color: 'from-purple-600 to-purple-700' },
         { id: 3, name: 'Generate Analysis', icon: Brain, color: 'from-indigo-600 to-indigo-700' },
-        { id: 4, name: 'Identify CDEs', icon: CheckSquare, color: 'from-violet-600 to-violet-700' },
-        { id: 5, name: 'Review Results', icon: Eye, color: 'from-blue-600 to-blue-700' },
-        { id: 6, name: 'Export Rules', icon: Download, color: 'from-green-600 to-green-700' }
+        { id: 4, name: 'Trust Graph', icon: Network, color: 'from-teal-600 to-teal-700' },  // NEW STEP
+        { id: 5, name: 'Identify CDEs', icon: CheckSquare, color: 'from-violet-600 to-violet-700' },
+        { id: 6, name: 'Review Results', icon: Eye, color: 'from-blue-600 to-blue-700' },
+        { id: 7, name: 'Export Rules', icon: Download, color: 'from-green-600 to-green-700' }
     ];
 
     return (
@@ -81,9 +83,10 @@ const Workflow = () => {
                     {currentStep === 1 && <DefineGoalStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
                     {currentStep === 2 && <UploadDatasetStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
                     {currentStep === 3 && <GenerateAnalysisStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
-                    {currentStep === 4 && <IdentifyCDEsStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
-                    {currentStep === 5 && <ReviewResultsStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
-                    {currentStep === 6 && <ExportRulesStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
+                    {currentStep === 4 && <TrustGraphStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
+                    {currentStep === 5 && <IdentifyCDEsStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
+                    {currentStep === 6 && <ReviewResultsStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
+                    {currentStep === 7 && <ExportRulesStep workflowData={workflowData} setWorkflowData={setWorkflowData} />}
                 </div>
 
                 {/* Navigation */}
@@ -291,10 +294,10 @@ const DefineGoalStep = ({ workflowData, setWorkflowData }) => {
     );
 };
 
-// Step 2: Upload Dataset
+// Step 2: Upload Dataset (Multiple Files Support)
 const UploadDatasetStep = ({ workflowData, setWorkflowData }) => {
     const [dragActive, setDragActive] = useState(false);
-    const [file, setFile] = useState(null);
+    const [files, setFiles] = useState(workflowData.datasets || []);
 
     const handleDrag = (e) => {
         e.preventDefault();
@@ -311,45 +314,73 @@ const UploadDatasetStep = ({ workflowData, setWorkflowData }) => {
         e.stopPropagation();
         setDragActive(false);
         
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFiles(Array.from(e.dataTransfer.files));
         }
     };
 
     const handleChange = (e) => {
         e.preventDefault();
-        if (e.target.files && e.target.files[0]) {
-            handleFile(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(Array.from(e.target.files));
         }
     };
 
-    const handleFile = (file) => {
-        setFile(file);
+    const handleFiles = (newFiles) => {
+        const validFiles = newFiles.filter(file => {
+            const isValid = file.name.endsWith('.csv') || file.name.endsWith('.parquet');
+            const isUnderLimit = file.size <= 100 * 1024 * 1024; // 100MB
+            return isValid && isUnderLimit;
+        });
+
+        const fileObjects = validFiles.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type || (file.name.endsWith('.csv') ? 'text/csv' : 'application/parquet'),
+            file: file,
+            id: `${file.name}-${Date.now()}`
+        }));
+
+        const updatedFiles = [...files, ...fileObjects];
+        setFiles(updatedFiles);
         setWorkflowData({
             ...workflowData,
-            dataset: {
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                file: file
-            }
+            datasets: updatedFiles
+        });
+    };
+
+    const removeFile = (fileId) => {
+        const updatedFiles = files.filter(f => f.id !== fileId);
+        setFiles(updatedFiles);
+        setWorkflowData({
+            ...workflowData,
+            datasets: updatedFiles
         });
     };
 
     return (
         <div>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white">
-                    <Upload size={24} />
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white">
+                        <Upload size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Upload Your Datasets</h2>
+                        <p className="text-gray-600">Upload one or more CSV or Parquet files for quality analysis</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Upload Your Dataset</h2>
-                    <p className="text-gray-600">Upload CSV or Parquet files for quality analysis</p>
-                </div>
+                {files.length > 0 && (
+                    <div className="text-right">
+                        <div className="text-sm text-gray-600">Files Uploaded</div>
+                        <div className="text-2xl font-bold text-purple-700">{files.length}</div>
+                    </div>
+                )}
             </div>
 
+            {/* Upload Area */}
             <div
-                className={`relative border-3 border-dashed rounded-xl p-12 text-center transition-all ${
+                className={`relative border-3 border-dashed rounded-xl p-8 text-center transition-all mb-6 ${
                     dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'
                 }`}
                 onDragEnter={handleDrag}
@@ -362,51 +393,54 @@ const UploadDatasetStep = ({ workflowData, setWorkflowData }) => {
                     id="file-upload"
                     className="hidden"
                     accept=".csv,.parquet"
+                    multiple
                     onChange={handleChange}
                 />
                 
-                {!file ? (
-                    <div>
-                        <Upload size={64} className="mx-auto text-gray-400 mb-4" />
-                        <p className="text-lg font-semibold text-gray-700 mb-2">
-                            Drag and drop your dataset here
-                        </p>
-                        <p className="text-sm text-gray-500 mb-4">or</p>
-                        <label
-                            htmlFor="file-upload"
-                            className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold cursor-pointer hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
-                        >
-                            Browse Files
-                        </label>
-                        <p className="text-xs text-gray-500 mt-4">Supported formats: CSV, Parquet (Max 100MB)</p>
-                    </div>
-                ) : (
-                    <div className="bg-white rounded-lg p-6 shadow-md">
-                        <CheckCircle size={48} className="mx-auto text-green-600 mb-4" />
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">File Uploaded Successfully</h3>
-                        <div className="text-left max-w-md mx-auto space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Filename:</span>
-                                <span className="font-semibold">{file.name}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Size:</span>
-                                <span className="font-semibold">{(file.size / 1024).toFixed(2)} KB</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Type:</span>
-                                <span className="font-semibold">{file.type || 'Unknown'}</span>
+                <Upload size={48} className="mx-auto text-gray-400 mb-3" />
+                <p className="text-lg font-semibold text-gray-700 mb-2">
+                    Drag and drop your datasets here
+                </p>
+                <p className="text-sm text-gray-500 mb-4">or</p>
+                <label
+                    htmlFor="file-upload"
+                    className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold cursor-pointer hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
+                >
+                    Browse Files
+                </label>
+                <p className="text-xs text-gray-500 mt-4">
+                    Supported formats: CSV, Parquet | Max 100MB per file | Multiple files allowed
+                </p>
+            </div>
+
+            {/* Uploaded Files List */}
+            {files.length > 0 && (
+                <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Uploaded Files ({files.length})</h3>
+                    {files.map((file) => (
+                        <div key={file.id} className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4 flex-1">
+                                    <CheckCircle size={24} className="text-green-600 flex-shrink-0" />
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-gray-900">{file.name}</div>
+                                        <div className="text-sm text-gray-600 mt-1">
+                                            {(file.size / 1024).toFixed(2)} KB • {file.type || 'Unknown type'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => removeFile(file.id)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                    title="Remove file"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
                         </div>
-                        <button
-                            onClick={() => { setFile(null); setWorkflowData({ ...workflowData, dataset: null }); }}
-                            className="mt-4 text-sm text-red-600 hover:text-red-700 font-semibold"
-                        >
-                            Remove File
-                        </button>
-                    </div>
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -416,25 +450,46 @@ const GenerateAnalysisStep = ({ workflowData, setWorkflowData }) => {
     const [analyzing, setAnalyzing] = useState(false);
     const [progress, setProgress] = useState(0);
 
-    const handleAnalyze = () => {
+    const handleAnalyze = async () => {
+        if (!workflowData.datasets || workflowData.datasets.length === 0) {
+            alert('Please upload at least one dataset first');
+            return;
+        }
+
         setAnalyzing(true);
         setProgress(0);
-        
+
+        // In a real implementation, you would upload files to the backend here
+        // For now, we'll simulate the analysis
         const interval = setInterval(() => {
             setProgress(prev => {
                 if (prev >= 100) {
                     clearInterval(interval);
                     setAnalyzing(false);
-                    // Simulate analysis results
+                    
+                    // Generate analysis results based on uploaded files
+                    const totalRows = workflowData.datasets.reduce((sum, ds) => sum + Math.floor(Math.random() * 10000), 0);
+                    const analysis = {
+                        datasets: workflowData.datasets.map(ds => ({
+                            name: ds.name,
+                            columns: Math.floor(Math.random() * 20) + 5,
+                            rows: Math.floor(Math.random() * 10000) + 1000,
+                            size: ds.size
+                        })),
+                        totalColumns: workflowData.datasets.reduce((sum, ds) => sum + (Math.floor(Math.random() * 20) + 5), 0),
+                        totalRows: totalRows,
+                        nullValues: Math.floor(totalRows * 0.01),
+                        duplicates: Math.floor(totalRows * 0.002),
+                        dataTypes: { 
+                            numeric: Math.floor(Math.random() * 10) + 3, 
+                            categorical: Math.floor(Math.random() * 8) + 2,
+                            datetime: Math.floor(Math.random() * 3) + 1
+                        }
+                    };
+                    
                     setWorkflowData({
                         ...workflowData,
-                        analysis: {
-                            columns: 12,
-                            rows: 5000,
-                            nullValues: 45,
-                            duplicates: 12,
-                            dataTypes: { numeric: 8, categorical: 4 }
-                        }
+                        analysis: analysis
                     });
                     return 100;
                 }
@@ -459,11 +514,11 @@ const GenerateAnalysisStep = ({ workflowData, setWorkflowData }) => {
                 <div className="text-center py-12">
                     <Brain size={64} className="mx-auto text-indigo-600 mb-6" />
                     <p className="text-gray-600 mb-6">
-                        Click below to start AI-powered analysis of your dataset
+                        Click below to start AI-powered analysis of your {workflowData.datasets?.length || 0} dataset(s)
                     </p>
                     <button
                         onClick={handleAnalyze}
-                        disabled={analyzing || !workflowData.dataset}
+                        disabled={analyzing || !workflowData.datasets || workflowData.datasets.length === 0}
                         className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-lg"
                     >
                         {analyzing ? 'Analyzing...' : 'Start Analysis'}
@@ -482,22 +537,45 @@ const GenerateAnalysisStep = ({ workflowData, setWorkflowData }) => {
                     )}
                 </div>
             ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200">
-                        <div className="text-3xl font-bold text-blue-700">{workflowData.analysis.columns}</div>
-                        <div className="text-sm text-blue-600 font-semibold mt-1">Columns</div>
+                <div>
+                    {/* Overall Statistics */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200">
+                            <div className="text-3xl font-bold text-blue-700">{workflowData.analysis.totalColumns}</div>
+                            <div className="text-sm text-blue-600 font-semibold mt-1">Total Columns</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border-2 border-purple-200">
+                            <div className="text-3xl font-bold text-purple-700">{workflowData.analysis.totalRows.toLocaleString()}</div>
+                            <div className="text-sm text-purple-600 font-semibold mt-1">Total Rows</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border-2 border-orange-200">
+                            <div className="text-3xl font-bold text-orange-700">{workflowData.analysis.nullValues}</div>
+                            <div className="text-sm text-orange-600 font-semibold mt-1">Null Values</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200">
+                            <div className="text-3xl font-bold text-green-700">{workflowData.analysis.duplicates}</div>
+                            <div className="text-sm text-green-600 font-semibold mt-1">Duplicates</div>
+                        </div>
                     </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border-2 border-purple-200">
-                        <div className="text-3xl font-bold text-purple-700">{workflowData.analysis.rows.toLocaleString()}</div>
-                        <div className="text-sm text-purple-600 font-semibold mt-1">Rows</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border-2 border-orange-200">
-                        <div className="text-3xl font-bold text-orange-700">{workflowData.analysis.nullValues}</div>
-                        <div className="text-sm text-orange-600 font-semibold mt-1">Null Values</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200">
-                        <div className="text-3xl font-bold text-green-700">{workflowData.analysis.duplicates}</div>
-                        <div className="text-sm text-green-600 font-semibold mt-1">Duplicates</div>
+
+                    {/* Per-Dataset Breakdown */}
+                    <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Dataset Breakdown</h3>
+                        <div className="space-y-3">
+                            {workflowData.analysis.datasets?.map((ds, idx) => (
+                                <div key={idx} className="bg-white border-2 border-gray-200 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <div className="font-semibold text-gray-900">{ds.name}</div>
+                                            <div className="text-sm text-gray-600 mt-1">
+                                                {ds.columns} columns • {ds.rows.toLocaleString()} rows • {(ds.size / 1024).toFixed(2)} KB
+                                            </div>
+                                        </div>
+                                        <CheckCircle className="text-green-600" size={24} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -505,7 +583,196 @@ const GenerateAnalysisStep = ({ workflowData, setWorkflowData }) => {
     );
 };
 
-// Step 4: Identify CDEs
+// Step 4: Trust Graph Visualization
+const TrustGraphStep = ({ workflowData, setWorkflowData }) => {
+    const [graphData, setGraphData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        // Generate trust graph when component mounts
+        if (workflowData.analysis && !graphData) {
+            generateTrustGraph();
+        }
+    }, [workflowData.analysis]);
+
+    const generateTrustGraph = () => {
+        setLoading(true);
+        
+        // Simulate trust graph generation
+        setTimeout(() => {
+            const graph = {
+                nodes: [
+                    // Dataset nodes
+                    ...workflowData.analysis.datasets.map((ds, idx) => ({
+                        id: `dataset_${idx}`,
+                        label: ds.name,
+                        type: 'dataset',
+                        color: '#7c3aed'
+                    })),
+                    // Column nodes (sample)
+                    { id: 'col_customer_id', label: 'customer_id', type: 'column', color: '#2563eb' },
+                    { id: 'col_email', label: 'email', type: 'column', color: '#2563eb' },
+                    { id: 'col_purchase_amount', label: 'purchase_amount', type: 'column', color: '#2563eb' },
+                    { id: 'col_status', label: 'status', type: 'column', color: '#2563eb' },
+                    // Glossary nodes
+                    { id: 'gloss_customer', label: 'Customer', type: 'glossary', color: '#059669' },
+                    { id: 'gloss_transaction', label: 'Transaction', type: 'glossary', color: '#059669' },
+                ],
+                edges: [
+                    // Dataset to Column relationships
+                    { from: 'dataset_0', to: 'col_customer_id', label: 'contains' },
+                    { from: 'dataset_0', to: 'col_email', label: 'contains' },
+                    { from: 'dataset_0', to: 'col_purchase_amount', label: 'contains' },
+                    { from: 'dataset_0', to: 'col_status', label: 'contains' },
+                    // Column to Glossary relationships
+                    { from: 'col_customer_id', to: 'gloss_customer', label: 'represents' },
+                    { from: 'col_email', to: 'gloss_customer', label: 'represents' },
+                    { from: 'col_purchase_amount', to: 'gloss_transaction', label: 'represents' },
+                ],
+                stats: {
+                    totalNodes: 10,
+                    totalEdges: 7,
+                    datasets: workflowData.analysis.datasets.length,
+                    columns: 4,
+                    glossaryTerms: 2
+                }
+            };
+            
+            setGraphData(graph);
+            setWorkflowData({
+                ...workflowData,
+                trustGraph: graph
+            });
+            setLoading(false);
+        }, 1500);
+    };
+
+    return (
+        <div>
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center text-white">
+                    <Network size={24} />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Trust Graph</h2>
+                    <p className="text-gray-600">Semantic relationships between datasets, columns, and business terms</p>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="text-center py-12">
+                    <Network size={64} className="mx-auto text-teal-600 mb-6 animate-pulse" />
+                    <p className="text-gray-600">Generating trust graph...</p>
+                </div>
+            ) : graphData ? (
+                <div>
+                    {/* Graph Statistics */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border-2 border-purple-200">
+                            <div className="text-2xl font-bold text-purple-700">{graphData.stats.datasets}</div>
+                            <div className="text-xs text-purple-600 font-semibold mt-1">Datasets</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-200">
+                            <div className="text-2xl font-bold text-blue-700">{graphData.stats.columns}</div>
+                            <div className="text-xs text-blue-600 font-semibold mt-1">Columns</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-200">
+                            <div className="text-2xl font-bold text-green-700">{graphData.stats.glossaryTerms}</div>
+                            <div className="text-xs text-green-600 font-semibold mt-1">Glossary Terms</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg border-2 border-teal-200">
+                            <div className="text-2xl font-bold text-teal-700">{graphData.stats.totalNodes}</div>
+                            <div className="text-xs text-teal-600 font-semibold mt-1">Total Nodes</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg border-2 border-indigo-200">
+                            <div className="text-2xl font-bold text-indigo-700">{graphData.stats.totalEdges}</div>
+                            <div className="text-xs text-indigo-600 font-semibold mt-1">Relationships</div>
+                        </div>
+                    </div>
+
+                    {/* Graph Visualization (Simplified) */}
+                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl p-8 mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Knowledge Graph Structure</h3>
+                        <div className="space-y-6">
+                            {/* Datasets Layer */}
+                            <div>
+                                <div className="text-sm font-semibold text-purple-700 mb-2">📊 Datasets</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {graphData.nodes.filter(n => n.type === 'dataset').map(node => (
+                                        <div key={node.id} className="px-4 py-2 bg-purple-100 border-2 border-purple-300 rounded-lg text-sm font-semibold text-purple-800">
+                                            {node.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Columns Layer */}
+                            <div>
+                                <div className="text-sm font-semibold text-blue-700 mb-2">📋 Columns (CDEs)</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {graphData.nodes.filter(n => n.type === 'column').map(node => (
+                                        <div key={node.id} className="px-4 py-2 bg-blue-100 border-2 border-blue-300 rounded-lg text-sm font-semibold text-blue-800">
+                                            {node.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Glossary Layer */}
+                            <div>
+                                <div className="text-sm font-semibold text-green-700 mb-2">📖 Business Glossary</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {graphData.nodes.filter(n => n.type === 'glossary').map(node => (
+                                        <div key={node.id} className="px-4 py-2 bg-green-100 border-2 border-green-300 rounded-lg text-sm font-semibold text-green-800">
+                                            {node.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Relationships Table */}
+                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Semantic Relationships</h3>
+                        <div className="space-y-2">
+                            {graphData.edges.map((edge, idx) => {
+                                const fromNode = graphData.nodes.find(n => n.id === edge.from);
+                                const toNode = graphData.nodes.find(n => n.id === edge.to);
+                                return (
+                                    <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                        <span className="px-3 py-1 bg-gray-200 rounded text-sm font-semibold text-gray-700">
+                                            {fromNode?.label}
+                                        </span>
+                                        <span className="text-gray-500 text-sm">→ {edge.label} →</span>
+                                        <span className="px-3 py-1 bg-gray-200 rounded text-sm font-semibold text-gray-700">
+                                            {toNode?.label}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                        <p className="text-sm text-blue-900">
+                            <strong>Note:</strong> This trust graph shows the semantic relationships between your datasets, 
+                            columns, and business terms. These relationships help identify Critical Data Elements (CDEs) 
+                            and inform quality rule selection in the next steps.
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-12">
+                    <Network size={64} className="mx-auto text-gray-400 mb-6" />
+                    <p className="text-gray-600 mb-6">No trust graph available. Please complete the analysis step first.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Step 5: Identify CDEs
 const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
     const [columns] = useState([
         { name: 'customer_id', type: 'string', importance: 0.95, selected: true },
@@ -530,19 +797,40 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
     const showExplanation = async (columnName) => {
         setSelectedColumn(columnName);
         try {
+            // Find the column data
+            const column = columns.find(c => c.name === columnName);
+            if (!column) return;
+
             const response = await fetch('http://localhost:8000/explain/cde', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    column_name: columnName,
+                    column: columnName,
+                    importance_score: column.importance,
+                    data_type: column.type,
                     goal: 'STANDARD_DQ',
-                    dataset_context: 'customer_transactions'
+                    statistics: null
                 })
             });
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('CDE Explanation data:', data); // Debug log
             setCdeExplanation(data);
         } catch (err) {
             console.error('Failed to load CDE explanation:', err);
+            // Set a fallback explanation to prevent blank page
+            setCdeExplanation({
+                primary_reason: 'Unable to load explanation',
+                importance_level: column.importance >= 0.9 ? 'Critical' : 'High',
+                importance_score: column.importance,
+                detailed_reasons: ['Explanation service temporarily unavailable'],
+                recommendations: ['Please try again later'],
+                risk_if_ignored: 'Unable to determine risk at this time'
+            });
         }
     };
 
@@ -575,7 +863,7 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
                                 <h3 className="text-lg font-bold text-violet-900 mb-1">
                                     Why "{selectedColumn}" is Critical
                                 </h3>
-                                <p className="text-violet-800 text-sm">{cdeExplanation.explanation}</p>
+                                <p className="text-violet-800 text-sm">{cdeExplanation.primary_reason || 'Loading explanation...'}</p>
                             </div>
                         </div>
                         <button
@@ -588,37 +876,50 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="bg-white/60 rounded-lg p-3">
-                            <div className="text-xs font-semibold text-gray-600 mb-1">Business Impact</div>
-                            <div className="text-2xl font-bold text-violet-700">{cdeExplanation.business_impact}</div>
+                            <div className="text-xs font-semibold text-gray-600 mb-1">Importance Level</div>
+                            <div className="text-2xl font-bold text-violet-700">{cdeExplanation.importance_level || 'N/A'}</div>
                         </div>
                         <div className="bg-white/60 rounded-lg p-3">
-                            <div className="text-xs font-semibold text-gray-600 mb-1">Risk Level</div>
-                            <div className="text-2xl font-bold text-violet-700">{cdeExplanation.risk_level}</div>
+                            <div className="text-xs font-semibold text-gray-600 mb-1">Importance Score</div>
+                            <div className="text-2xl font-bold text-violet-700">
+                                {cdeExplanation.importance_score != null ? (cdeExplanation.importance_score * 100).toFixed(0) : '0'}%
+                            </div>
                         </div>
                     </div>
 
-                    <div className="mb-4">
-                        <div className="text-sm font-semibold text-violet-900 mb-2">Quality Concerns:</div>
-                        <ul className="text-sm text-violet-800 space-y-1">
-                            {cdeExplanation.quality_concerns?.map((concern, i) => (
-                                <li key={i} className="flex items-start gap-2">
-                                    <span className="text-orange-600">⚠</span>
-                                    <span>{concern}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <div className="text-sm font-semibold text-violet-900 mb-2">Recommended Checks:</div>
-                        <div className="flex flex-wrap gap-2">
-                            {cdeExplanation.recommended_checks?.map((check, i) => (
-                                <span key={i} className="px-3 py-1 bg-violet-200 text-violet-800 rounded-full text-xs font-semibold">
-                                    {check}
-                                </span>
-                            ))}
+                    {cdeExplanation.detailed_reasons && cdeExplanation.detailed_reasons.length > 0 && (
+                        <div className="mb-4">
+                            <div className="text-sm font-semibold text-violet-900 mb-2">Detailed Reasons:</div>
+                            <ul className="text-sm text-violet-800 space-y-1">
+                                {cdeExplanation.detailed_reasons.map((reason, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                        <span className="text-violet-600">•</span>
+                                        <span>{reason}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                    </div>
+                    )}
+
+                    {cdeExplanation.risk_if_ignored && (
+                        <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            <div className="text-sm font-semibold text-orange-900 mb-1">⚠️ Risk if Ignored:</div>
+                            <div className="text-sm text-orange-800">{cdeExplanation.risk_if_ignored}</div>
+                        </div>
+                    )}
+
+                    {cdeExplanation.recommendations && cdeExplanation.recommendations.length > 0 && (
+                        <div>
+                            <div className="text-sm font-semibold text-violet-900 mb-2">Recommended Checks:</div>
+                            <div className="flex flex-wrap gap-2">
+                                {cdeExplanation.recommendations.map((check, i) => (
+                                    <span key={i} className="px-3 py-1 bg-violet-200 text-violet-800 rounded-full text-xs font-semibold">
+                                        {check}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -681,7 +982,7 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
     );
 };
 
-// Step 5: Review Results
+// Step 6: Review Results
 const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
     const [rules] = useState([
         { column: 'customer_id', type: 'not_null', dimension: 'Completeness', severity: 'Critical' },
@@ -698,13 +999,28 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
     useEffect(() => {
         // Fetch rule selection explanation
         if (showRuleExplanations) {
+            // Convert rules to the format expected by the API
+            const selectedRules = rules.map(rule => ({
+                rule_id: `rule_${rule.column}_${rule.type}`,
+                name: `${rule.column} ${rule.type}`,
+                description: `Check ${rule.type} for ${rule.column}`,
+                column: rule.column,
+                rule_type: rule.type,
+                dimension: rule.dimension,
+                severity: rule.severity.toUpperCase(),
+                goal: 'STANDARD_DQ'
+            }));
+
+            const allPossibleRules = ['not_null', 'regex_match', 'range', 'unique', 'referential_integrity', 'statistical_outlier'];
+
             fetch('http://localhost:8000/explain/rules', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    selected_cdes: ['customer_id', 'email', 'purchase_amount', 'status'],
+                    selected_rules: selectedRules,
+                    all_possible_rules: allPossibleRules,
                     goal: 'STANDARD_DQ',
-                    dataset_context: 'customer_transactions'
+                    cdes: ['customer_id', 'email', 'purchase_amount', 'status']
                 })
             })
             .then(res => res.json())
@@ -761,23 +1077,37 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6 animate-in fade-in">
                     <div className="flex items-start gap-3 mb-4">
                         <Lightbulb className="text-blue-600 flex-shrink-0 mt-1" size={24} />
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-lg font-bold text-blue-900 mb-2">Why These Rules Were Selected</h3>
-                            <p className="text-blue-800 text-sm mb-4">{ruleExplanation.explanation}</p>
+                            <p className="text-blue-800 text-sm mb-3">
+                                Based on your <strong>{ruleExplanation.goal}</strong> goal and selected CDEs, we applied <strong>{ruleExplanation.total_rules_selected} rules</strong>.
+                            </p>
+                            {ruleExplanation.selection_criteria && (
+                                <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mb-3">
+                                    <strong>Selection Criteria:</strong> {ruleExplanation.selection_criteria}
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6 mb-4">
                         <div>
-                            <div className="text-sm font-semibold text-blue-900 mb-2">✓ Selected Rules:</div>
-                            <ul className="text-sm text-blue-800 space-y-1">
+                            <div className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                <span className="text-green-600 text-lg">✓</span>
+                                Selected Rules ({ruleExplanation.selected_rules?.length || 0})
+                            </div>
+                            <ul className="text-sm space-y-3">
                                 {ruleExplanation.selected_rules?.map((rule, i) => (
-                                    <li key={i} className="flex items-start gap-2">
-                                        <span className="text-green-600">✓</span>
-                                        <div>
-                                            <span className="font-semibold">{rule.rule_type}</span>
-                                            <span className="text-xs text-blue-600 ml-2">({rule.dimension})</span>
-                                            <div className="text-xs text-blue-700 mt-1">{rule.reason}</div>
+                                    <li key={i} className="bg-white rounded-lg p-3 border border-green-200">
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-green-600 font-bold">✓</span>
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-gray-900">{rule.rule_type || rule.type}</div>
+                                                <div className="text-xs text-blue-600 mt-1">
+                                                    Column: {rule.column} | Dimension: {rule.dimension}
+                                                </div>
+                                                <div className="text-xs text-gray-700 mt-2">{rule.reason || rule.explanation}</div>
+                                            </div>
                                         </div>
                                     </li>
                                 ))}
@@ -785,15 +1115,19 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                         </div>
 
                         <div>
-                            <div className="text-sm font-semibold text-blue-900 mb-2">✗ Not Applicable:</div>
-                            <ul className="text-sm text-blue-800 space-y-1">
-                                {ruleExplanation.not_applicable?.map((rule, i) => (
-                                    <li key={i} className="flex items-start gap-2">
-                                        <span className="text-gray-400">✗</span>
-                                        <div>
-                                            <span className="font-semibold">{rule.rule_type}</span>
-                                            <span className="text-xs text-blue-600 ml-2">({rule.dimension})</span>
-                                            <div className="text-xs text-gray-600 mt-1">{rule.reason}</div>
+                            <div className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                <span className="text-gray-400 text-lg">✗</span>
+                                Not Applicable ({ruleExplanation.not_applicable_rules?.length || 0})
+                            </div>
+                            <ul className="text-sm space-y-3">
+                                {ruleExplanation.not_applicable_rules?.map((rule, i) => (
+                                    <li key={i} className="bg-white rounded-lg p-3 border border-gray-200">
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-gray-400 font-bold">✗</span>
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-gray-700">{rule.rule_type || rule.type}</div>
+                                                <div className="text-xs text-gray-600 mt-2">{rule.reason || rule.explanation}</div>
+                                            </div>
                                         </div>
                                     </li>
                                 ))}
@@ -801,12 +1135,30 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                         </div>
                     </div>
 
-                    <div className="bg-white/60 rounded-lg p-3">
-                        <div className="text-sm font-semibold text-blue-900 mb-2">Coverage Summary:</div>
-                        <div className="text-sm text-blue-800">
-                            {ruleExplanation.coverage_summary}
+                    {ruleExplanation.coverage_analysis && (
+                        <div className="bg-white rounded-lg p-4 border border-blue-200">
+                            <div className="text-sm font-semibold text-blue-900 mb-2">📊 Coverage Analysis:</div>
+                            <div className="text-sm text-blue-800">
+                                {typeof ruleExplanation.coverage_analysis === 'string' 
+                                    ? ruleExplanation.coverage_analysis 
+                                    : JSON.stringify(ruleExplanation.coverage_analysis)}
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {ruleExplanation.recommendations && ruleExplanation.recommendations.length > 0 && (
+                        <div className="mt-4 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                            <div className="text-sm font-semibold text-indigo-900 mb-2">💡 Recommendations:</div>
+                            <ul className="text-sm text-indigo-800 space-y-1">
+                                {ruleExplanation.recommendations.map((rec, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                        <span>•</span>
+                                        <span>{rec}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -860,7 +1212,7 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
     );
 };
 
-// Step 6: Export Rules
+// Step 7: Export Rules
 const ExportRulesStep = ({ workflowData }) => {
     const [exportFormat, setExportFormat] = useState('yaml');
 
