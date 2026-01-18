@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Target, Upload, Brain, CheckSquare, Eye, Download, ChevronRight, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Target, Upload, Brain, CheckSquare, Eye, Download, ChevronRight, CheckCircle, Info, HelpCircle, Lightbulb } from 'lucide-react';
 
 const Workflow = () => {
     const [currentStep, setCurrentStep] = useState(1);
@@ -110,6 +110,20 @@ const Workflow = () => {
 
 // Step 1: Define Goal
 const DefineGoalStep = ({ workflowData, setWorkflowData }) => {
+    const [selectedGoalType, setSelectedGoalType] = useState('STANDARD_DQ');
+    const [goalExplanation, setGoalExplanation] = useState(null);
+    const [showExplanation, setShowExplanation] = useState(false);
+
+    useEffect(() => {
+        // Fetch goal explanation when goal type changes
+        if (selectedGoalType) {
+            fetch(`http://localhost:8000/explain/goal/${selectedGoalType}`)
+                .then(res => res.json())
+                .then(data => setGoalExplanation(data))
+                .catch(err => console.error('Failed to load explanation:', err));
+        }
+    }, [selectedGoalType]);
+
     const handleChange = (field, value) => {
         setWorkflowData({
             ...workflowData,
@@ -117,19 +131,110 @@ const DefineGoalStep = ({ workflowData, setWorkflowData }) => {
         });
     };
 
+    const goalTypes = [
+        { value: 'STANDARD_DQ', label: 'Standard Quality', icon: '📊', color: 'blue' },
+        { value: 'REGULATORY_DQ', label: 'Regulatory', icon: '📋', color: 'purple' },
+        { value: 'AI_DQ', label: 'AI/ML', icon: '🤖', color: 'indigo' }
+    ];
+
     return (
         <div>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white">
-                    <Target size={24} />
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white">
+                        <Target size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Define Your Data Quality Goal</h2>
+                        <p className="text-gray-600">Set the objective and quality threshold for your data initiative</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Define Your Data Quality Goal</h2>
-                    <p className="text-gray-600">Set the objective and quality threshold for your data initiative</p>
-                </div>
+                <button
+                    onClick={() => setShowExplanation(!showExplanation)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                >
+                    <Info size={18} />
+                    {showExplanation ? 'Hide' : 'Show'} Help
+                </button>
             </div>
 
             <div className="space-y-6">
+                {/* Goal Type Selection */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Select Quality Goal Type</label>
+                    <div className="grid grid-cols-3 gap-4">
+                        {goalTypes.map(type => (
+                            <div
+                                key={type.value}
+                                onClick={() => setSelectedGoalType(type.value)}
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                    selectedGoalType === type.value
+                                        ? `border-${type.color}-500 bg-${type.color}-50 shadow-lg`
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                            >
+                                <div className="text-3xl mb-2">{type.icon}</div>
+                                <div className="font-bold text-gray-900">{type.label}</div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                    {type.value === 'STANDARD_DQ' && 'Operational data quality'}
+                                    {type.value === 'REGULATORY_DQ' && 'Compliance & audit ready'}
+                                    {type.value === 'AI_DQ' && 'ML model fitness'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Goal Explanation Panel */}
+                {showExplanation && goalExplanation && (
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6 animate-in fade-in">
+                        <div className="flex items-start gap-3 mb-4">
+                            <Lightbulb className="text-blue-600 flex-shrink-0 mt-1" size={24} />
+                            <div>
+                                <h3 className="text-lg font-bold text-blue-900 mb-2">{goalExplanation.title}</h3>
+                                <p className="text-blue-800 text-sm mb-4">{goalExplanation.explanation}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="bg-white/60 rounded-lg p-3">
+                                <div className="text-xs font-semibold text-gray-600 mb-1">Threshold</div>
+                                <div className="text-2xl font-bold text-blue-700">{goalExplanation.threshold}</div>
+                            </div>
+                            <div className="bg-white/60 rounded-lg p-3">
+                                <div className="text-xs font-semibold text-gray-600 mb-1">Approval Required</div>
+                                <div className="text-2xl font-bold text-blue-700">
+                                    {goalExplanation.approval_required ? 'Yes' : 'No'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <div className="text-sm font-semibold text-blue-900 mb-2">Use Cases:</div>
+                            <ul className="text-sm text-blue-800 space-y-1">
+                                {goalExplanation.use_cases?.map((uc, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                        <span className="text-blue-600">•</span>
+                                        <span>{uc}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <div className="text-sm font-semibold text-blue-900 mb-2">What to Expect:</div>
+                            <ul className="text-sm text-blue-800 space-y-1">
+                                {goalExplanation.what_to_expect?.map((exp, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                        <span className="text-green-600">✓</span>
+                                        <span>{exp}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Goal ID / Name</label>
                     <input
@@ -410,6 +515,8 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
         { name: 'status', type: 'categorical', importance: 0.82, selected: true },
         { name: 'region', type: 'categorical', importance: 0.65, selected: false },
     ]);
+    const [cdeExplanation, setCdeExplanation] = useState(null);
+    const [selectedColumn, setSelectedColumn] = useState(null);
 
     const toggleColumn = (index) => {
         const newColumns = [...columns];
@@ -418,6 +525,25 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
             ...workflowData,
             cdes: newColumns.filter(c => c.selected)
         });
+    };
+
+    const showExplanation = async (columnName) => {
+        setSelectedColumn(columnName);
+        try {
+            const response = await fetch('http://localhost:8000/explain/cde', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    column_name: columnName,
+                    goal: 'STANDARD_DQ',
+                    dataset_context: 'customer_transactions'
+                })
+            });
+            const data = await response.json();
+            setCdeExplanation(data);
+        } catch (err) {
+            console.error('Failed to load CDE explanation:', err);
+        }
     };
 
     return (
@@ -435,22 +561,78 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
             <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded mb-6">
                 <p className="text-sm text-blue-900">
                     <strong>AI Recommendation:</strong> Based on your goal, we've pre-selected columns with high business impact. 
-                    Review and adjust as needed.
+                    Review and adjust as needed. Click <HelpCircle className="inline" size={16} /> to see why each column was selected.
                 </p>
             </div>
+
+            {/* CDE Explanation Panel */}
+            {cdeExplanation && selectedColumn && (
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 rounded-xl p-6 mb-6 animate-in fade-in">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-3">
+                            <Lightbulb className="text-violet-600 flex-shrink-0 mt-1" size={24} />
+                            <div>
+                                <h3 className="text-lg font-bold text-violet-900 mb-1">
+                                    Why "{selectedColumn}" is Critical
+                                </h3>
+                                <p className="text-violet-800 text-sm">{cdeExplanation.explanation}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { setCdeExplanation(null); setSelectedColumn(null); }}
+                            className="text-violet-600 hover:text-violet-800"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-white/60 rounded-lg p-3">
+                            <div className="text-xs font-semibold text-gray-600 mb-1">Business Impact</div>
+                            <div className="text-2xl font-bold text-violet-700">{cdeExplanation.business_impact}</div>
+                        </div>
+                        <div className="bg-white/60 rounded-lg p-3">
+                            <div className="text-xs font-semibold text-gray-600 mb-1">Risk Level</div>
+                            <div className="text-2xl font-bold text-violet-700">{cdeExplanation.risk_level}</div>
+                        </div>
+                    </div>
+
+                    <div className="mb-4">
+                        <div className="text-sm font-semibold text-violet-900 mb-2">Quality Concerns:</div>
+                        <ul className="text-sm text-violet-800 space-y-1">
+                            {cdeExplanation.quality_concerns?.map((concern, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                    <span className="text-orange-600">⚠</span>
+                                    <span>{concern}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <div className="text-sm font-semibold text-violet-900 mb-2">Recommended Checks:</div>
+                        <div className="flex flex-wrap gap-2">
+                            {cdeExplanation.recommended_checks?.map((check, i) => (
+                                <span key={i} className="px-3 py-1 bg-violet-200 text-violet-800 rounded-full text-xs font-semibold">
+                                    {check}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-3">
                 {columns.map((col, index) => (
                     <div
                         key={col.name}
-                        className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
                             col.selected 
                                 ? 'border-violet-500 bg-violet-50' 
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
-                        onClick={() => toggleColumn(index)}
                     >
-                        <div className="flex items-center gap-4 flex-1">
+                        <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => toggleColumn(index)}>
                             <input
                                 type="checkbox"
                                 checked={col.selected}
@@ -463,6 +645,13 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); showExplanation(col.name); }}
+                                className="p-2 hover:bg-violet-100 rounded-lg transition"
+                                title="Why was this selected?"
+                            >
+                                <HelpCircle size={20} className="text-violet-600" />
+                            </button>
                             <div className="text-right">
                                 <div className="text-sm text-gray-600">Importance Score</div>
                                 <div className="font-bold text-lg text-violet-700">
@@ -503,6 +692,26 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
 
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
+    const [ruleExplanation, setRuleExplanation] = useState(null);
+    const [showRuleExplanations, setShowRuleExplanations] = useState(false);
+
+    useEffect(() => {
+        // Fetch rule selection explanation
+        if (showRuleExplanations) {
+            fetch('http://localhost:8000/explain/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    selected_cdes: ['customer_id', 'email', 'purchase_amount', 'status'],
+                    goal: 'STANDARD_DQ',
+                    dataset_context: 'customer_transactions'
+                })
+            })
+            .then(res => res.json())
+            .then(data => setRuleExplanation(data))
+            .catch(err => console.error('Failed to load rule explanation:', err));
+        }
+    }, [showRuleExplanations]);
 
     const handleVerify = () => {
         setVerifying(true);
@@ -528,15 +737,78 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
 
     return (
         <div>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white">
-                    <Eye size={24} />
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white">
+                        <Eye size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Review Generated DQ Rules</h2>
+                        <p className="text-gray-600">AI-generated rules based on your CDEs and quality goals</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Review Generated DQ Rules</h2>
-                    <p className="text-gray-600">AI-generated rules based on your CDEs and quality goals</p>
-                </div>
+                <button
+                    onClick={() => setShowRuleExplanations(!showRuleExplanations)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                >
+                    <Lightbulb size={18} />
+                    {showRuleExplanations ? 'Hide' : 'Show'} Explanations
+                </button>
             </div>
+
+            {/* Rule Selection Explanation */}
+            {showRuleExplanations && ruleExplanation && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6 animate-in fade-in">
+                    <div className="flex items-start gap-3 mb-4">
+                        <Lightbulb className="text-blue-600 flex-shrink-0 mt-1" size={24} />
+                        <div>
+                            <h3 className="text-lg font-bold text-blue-900 mb-2">Why These Rules Were Selected</h3>
+                            <p className="text-blue-800 text-sm mb-4">{ruleExplanation.explanation}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6 mb-4">
+                        <div>
+                            <div className="text-sm font-semibold text-blue-900 mb-2">✓ Selected Rules:</div>
+                            <ul className="text-sm text-blue-800 space-y-1">
+                                {ruleExplanation.selected_rules?.map((rule, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                        <span className="text-green-600">✓</span>
+                                        <div>
+                                            <span className="font-semibold">{rule.rule_type}</span>
+                                            <span className="text-xs text-blue-600 ml-2">({rule.dimension})</span>
+                                            <div className="text-xs text-blue-700 mt-1">{rule.reason}</div>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <div className="text-sm font-semibold text-blue-900 mb-2">✗ Not Applicable:</div>
+                            <ul className="text-sm text-blue-800 space-y-1">
+                                {ruleExplanation.not_applicable?.map((rule, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                        <span className="text-gray-400">✗</span>
+                                        <div>
+                                            <span className="font-semibold">{rule.rule_type}</span>
+                                            <span className="text-xs text-blue-600 ml-2">({rule.dimension})</span>
+                                            <div className="text-xs text-gray-600 mt-1">{rule.reason}</div>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="bg-white/60 rounded-lg p-3">
+                        <div className="text-sm font-semibold text-blue-900 mb-2">Coverage Summary:</div>
+                        <div className="text-sm text-blue-800">
+                            {ruleExplanation.coverage_summary}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-4 mb-6">
                 {rules.map((rule, index) => (

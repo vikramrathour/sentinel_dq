@@ -11,6 +11,7 @@ from intelligence.impact_analyzer import DecisionImpactAnalyzer
 from backend.ledger import InferenceLedger
 from intelligence.kpi_monitor import KPIMonitor
 from api.governance import router as governance_router
+from api.explanations import router as explanations_router
 
 app = FastAPI(
     title="Sentinel-DQ Platform API",
@@ -26,8 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include governance router
+# Include routers
 app.include_router(governance_router)
+app.include_router(explanations_router)
 
 # Initialize KPI monitor
 kpi_monitor = KPIMonitor()

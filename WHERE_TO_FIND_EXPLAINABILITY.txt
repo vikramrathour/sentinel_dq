@@ -1,0 +1,203 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    WHERE TO FIND EXPLAINABILITY IN THE UI                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+🌐 URL: http://localhost:5173
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         SENTINEL-DQ WORKFLOW PAGE                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 LOCATION #1: STEP 1 - DEFINE GOAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  🎯 Define Your Data Quality Goal                    [Show Help] ← CLICK!  │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Select Quality Goal Type:                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                       │
+│  │ 📊 Standard │  │ 📋Regulatory│  │ 🤖 AI/ML    │                       │
+│  │   Quality   │  │             │  │             │                       │
+│  └─────────────┘  └─────────────┘  └─────────────┘                       │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ 💡 EXPLANATION PANEL APPEARS HERE                                    │ │
+│  │                                                                      │ │
+│  │  Standard Data Quality                                               │ │
+│  │  Focuses on operational data correctness for daily business use     │ │
+│  │                                                                      │ │
+│  │  Threshold: 0.85          Approval Required: No                     │ │
+│  │                                                                      │ │
+│  │  Use Cases:                                                          │ │
+│  │  • Daily reporting dashboards                                        │ │
+│  │  • Operational analytics                                             │ │
+│  │  • Business intelligence                                             │ │
+│  │                                                                      │ │
+│  │  What to Expect:                                                     │ │
+│  │  ✓ Automated quality checks                                          │ │
+│  │  ✓ Continuous monitoring                                             │ │
+│  │  ✓ Self-service remediation                                          │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+WHAT TO DO: Click the "Show Help" button in the top-right corner
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 LOCATION #2: STEP 4 - IDENTIFY CDEs
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  ☑️  Identify Critical Data Elements                                        │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ ☑ customer_id                                                        │ │
+│  │   string                    Importance: 95%  [?] ← CLICK!            │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ ☑ email                                                              │ │
+│  │   string                    Importance: 88%  [?] ← CLICK!            │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ ☑ purchase_amount                                                    │ │
+│  │   numeric                   Importance: 92%  [?] ← CLICK!            │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ 💡 EXPLANATION PANEL APPEARS HERE                                    │ │
+│  │                                                                      │ │
+│  │  Why "customer_id" is Critical                                       │ │
+│  │  This column uniquely identifies customers and is essential for      │ │
+│  │  data integrity and business operations.                             │ │
+│  │                                                                      │ │
+│  │  Business Impact: High         Risk Level: High                      │ │
+│  │                                                                      │ │
+│  │  Quality Concerns:                                                   │ │
+│  │  ⚠ Missing values break customer relationships                       │ │
+│  │  ⚠ Duplicates cause double-counting in metrics                       │ │
+│  │  ⚠ Invalid formats prevent system integration                        │ │
+│  │                                                                      │ │
+│  │  Recommended Checks:                                                 │ │
+│  │  [NOT_NULL] [UNIQUE] [FORMAT_VALIDATION]                             │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+WHAT TO DO: Click the help icon (?) next to any column name
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 LOCATION #3: STEP 5 - REVIEW RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  👁️  Review Generated DQ Rules               [Show Explanations] ← CLICK!  │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ 💡 EXPLANATION PANEL APPEARS HERE                                    │ │
+│  │                                                                      │ │
+│  │  Why These Rules Were Selected                                       │ │
+│  │  Based on your STANDARD_DQ goal and 4 selected CDEs, we applied     │ │
+│  │  rules covering Completeness, Validity, and Consistency dimensions.  │ │
+│  │                                                                      │ │
+│  │  ┌────────────────────────┐  ┌────────────────────────┐             │ │
+│  │  │ ✓ Selected Rules:      │  │ ✗ Not Applicable:      │             │ │
+│  │  │                        │  │                        │             │ │
+│  │  │ • NOT_NULL             │  │ • UNIQUE               │             │ │
+│  │  │   (Completeness)       │  │   (Not required)       │             │ │
+│  │  │   Reason: Critical ID  │  │   Reason: Duplicates   │             │ │
+│  │  │   field must exist     │  │   are acceptable       │             │ │
+│  │  │                        │  │                        │             │ │
+│  │  │ • REGEX_MATCH          │  │ • RANGE                │             │ │
+│  │  │   (Validity)           │  │   (Not numeric)        │             │ │
+│  │  │   Reason: Email must   │  │   Reason: Text field   │             │ │
+│  │  │   match valid format   │  │   doesn't need range   │             │ │
+│  │  │                        │  │                        │             │ │
+│  │  │ • RANGE                │  │ • REFERENTIAL          │             │ │
+│  │  │   (Validity)           │  │   (No foreign keys)    │             │ │
+│  │  │   Reason: Amount must  │  │   Reason: Standalone   │             │ │
+│  │  │   be within bounds     │  │   table                │             │ │
+│  │  └────────────────────────┘  └────────────────────────┘             │ │
+│  │                                                                      │ │
+│  │  Coverage Summary:                                                   │ │
+│  │  4 rules covering 3 dimensions (Completeness, Validity, Consistency) │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  Generated Rules:                                                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ customer_id | not_null | Completeness | Critical                     │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ email | regex_match | Validity | High                                │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ purchase_amount | range | Validity | High                            │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ status | not_null | Completeness | Medium                            │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+WHAT TO DO: Click the "Show Explanations" button in the top-right corner
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QUICK TEST CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. [ ] Open http://localhost:5173
+2. [ ] You land on Workflow page
+3. [ ] Click "Show Help" in Step 1 → See goal explanation
+4. [ ] Navigate to Step 4 (click Next or click step in progress bar)
+5. [ ] Click ? icon next to any column → See CDE explanation
+6. [ ] Navigate to Step 5 (click Next or click step in progress bar)
+7. [ ] Click "Show Explanations" → See rule explanation
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 VISUAL INDICATORS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COLORS:
+  🔵 Blue gradient    = Goal explanations
+  🟣 Violet gradient  = CDE explanations
+  🔷 Indigo gradient  = Rule explanations
+
+ICONS:
+  💡 Lightbulb    = Explanation panel
+  ❓ Help Circle  = Click for CDE explanation
+  ℹ️  Info        = Toggle help
+  ✓ Checkmark    = Selected/Applied
+  ✗ X mark       = Not applicable
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 SERVERS STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Backend:  http://localhost:8000  (Running)
+✅ Frontend: http://localhost:5173  (Running)
+✅ API Docs: http://localhost:8000/docs
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 EXPLAINABILITY_UI_QUICKSTART.md    - Visual guide (this file)
+📄 UI_EXPLAINABILITY_INTEGRATION.md   - Technical details
+📄 EXPLAINABILITY_COMPLETE.md         - Complete summary
+📄 EXPLAINABILITY_GUIDE.md            - Backend API guide
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ STATUS: COMPLETE AND WORKING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
