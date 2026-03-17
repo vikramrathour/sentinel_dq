@@ -61,5 +61,5 @@ def to_great_expectations(rules_config: RulesConfig) -> Dict[str, Any]:
     return {
         "data_asset_type": "Dataset",
         "expectations": expectations,
-        "meta": {"source": "Sentinel-DQ"}
+        "meta": {"source": "OrianDQ"}
     }

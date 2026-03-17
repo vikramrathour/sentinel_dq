@@ -1,0 +1,52 @@
+{
+  "dataset_id": "1859ecc1f037b4642f4714c6de1b882e",
+  "filename": "test.xlsx",
+  "file_hash": "1859ecc1f037b4642f4714c6de1b882e",
+  "file_format": "xlsx",
+  "profiled_at": "2026-03-16T12:18:27.460160",
+  "cached": false,
+  "row_count": 3,
+  "column_count": 2,
+  "duplicate_count": 0,
+  "duplicate_rate": 0.0,
+  "total_null_count": 0,
+  "data_types": {
+    "numeric": 1,
+    "categorical": 1,
+    "datetime": 0
+  },
+  "columns": [
+    {
+      "name": "amount",
+      "null_count": 0,
+      "null_rate": 0.0,
+      "unique_count": 3,
+      "cardinality_rate": 1.0,
+      "data_type": "numeric",
+      "stats": {
+        "min": 100.0,
+        "max": 300.0,
+        "mean": 200.0,
+        "median": 200.0,
+        "std": 100.0,
+        "p25": 150.0,
+        "p75": 250.0
+      }
+    },
+    {
+      "name": "status",
+      "null_count": 0,
+      "null_rate": 0.0,
+      "unique_count": 2,
+      "cardinality_rate": 0.6667,
+      "data_type": "categorical",
+      "stats": {
+        "top_values": {
+          "active": 2,
+          "inactive": 1
+        }
+      }
+    }
+  ],
+  "sheet_name": "Sheet1"
+}

@@ -1,20 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import hashlib
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from pathlib import Path
 from storage.persistence import METADATA_DIR
+from intelligence.document_parser import DocumentParser
+from intelligence.rule_extractor import RuleExtractor
 from intelligence.impact_analyzer import DecisionImpactAnalyzer
+from intelligence.profiler import DataProfiler
 from backend.ledger import InferenceLedger
 from intelligence.kpi_monitor import KPIMonitor
 from api.governance import router as governance_router
 from api.explanations import router as explanations_router
 
 app = FastAPI(
-    title="Sentinel-DQ Platform API",
+    title="OrianDQ Platform API",
     version="2.0",
     description="Enterprise Data Quality Management Platform - Aligned with W3C DQV, DAMA-DMBOK"
 )
@@ -31,8 +36,55 @@ app.add_middleware(
 app.include_router(governance_router)
 app.include_router(explanations_router)
 
-# Initialize KPI monitor
+# Initialize KPI monitor and profiler
 kpi_monitor = KPIMonitor()
+profiler = DataProfiler()
+
+# ==================== Phase 2: Reference Document Ingestion ====================
+DOCUMENTS_DIR = METADATA_DIR / "documents"
+DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+doc_parser = DocumentParser()
+rule_extractor = RuleExtractor()
+
+# ==================== Step 1 & 2: Ingestion & Profiling ====================
+
+@app.post("/ingest")
+async def ingest_dataset(file: UploadFile = File(...)):
+    """
+    Upload a dataset file (CSV or Parquet) and compute its statistical profile.
+    If the same file was previously ingested (detected by MD5 hash), returns the
+    cached profile immediately without re-computing.
+    """
+    try:
+        file_bytes = await file.read()
+        profile = profiler.ingest(file_bytes, file.filename)
+        return profile
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/datasets")
+def list_datasets():
+    """
+    List all previously ingested datasets with their profile summaries.
+    """
+    return profiler.list_profiles()
+
+
+@app.get("/datasets/{dataset_id}/profile")
+def get_dataset_profile(dataset_id: str):
+    """
+    Retrieve the full statistical profile for a specific dataset (by hash ID).
+    """
+    profile = profiler.get_profile(dataset_id)
+    if not profile:
+        raise HTTPException(
+            status_code=404, detail=f"No profile found for dataset '{dataset_id}'"
+        )
+    return profile
+
 
 # --- Models ---
 class GoalInput(BaseModel):
@@ -236,6 +288,145 @@ def get_prometheus_metrics():
     Export metrics in Prometheus format for monitoring integration.
     """
     return kpi_monitor.export_prometheus_metrics()
+
+# ==================== Phase 2: Reference Document Endpoints ====================
+
+@app.post("/ingest-document")
+async def ingest_reference_document(file: UploadFile = File(...)):
+    """
+    Upload a reference document (JSON Schema, XSD, YAML data contract).
+    Extracts deterministic DQ rules from the document structure.
+    Supports: .json (schema), .xsd, .yaml, .yml, .docx (data dictionary), .xlsx/.xls (data catalog)
+    Caches by MD5 hash — same document re-uploaded returns instantly.
+    """
+    file_bytes = await file.read()
+
+    # Compute MD5 hash for cache key
+    file_hash = hashlib.md5(file_bytes).hexdigest()
+
+    # Return cached result if available
+    cached_path = DOCUMENTS_DIR / f"{file_hash}.json"
+    if cached_path.exists():
+        with open(cached_path, "r") as f:
+            cached = json.load(f)
+        cached["cached"] = True
+        return cached
+
+    # Validate extension
+    filename = file.filename or ""
+    ext = Path(filename).suffix.lower()
+    if ext not in {".json", ".xsd", ".yaml", ".yml", ".docx", ".xlsx", ".xls"}:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported document type. Supported reference documents: "
+                ".json (schema), .xsd, .yaml, .yml, .docx (data dictionary), "
+                ".xlsx/.xls (data catalog)"
+            )
+        )
+
+    # Parse document
+    result = doc_parser.parse(file_bytes, filename)
+
+    if result.get("document_type") == "unknown":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Could not detect document type. Supported: JSON Schema (.json), "
+                "XSD (.xsd), YAML contract (.yaml/.yml), DOCX data dictionary (.docx), "
+                "Excel data catalog (.xlsx/.xls)."
+            )
+        )
+
+    # Extract rules and summarize
+    rules = rule_extractor.extract_rules(result, result["document_type"])
+    summary = rule_extractor.summarize(rules)
+
+    # Build and persist response
+    response = {
+        "document_id": file_hash,
+        "filename": filename,
+        "document_type": result["document_type"],
+        "cached": False,
+        "ingested_at": datetime.utcnow().isoformat(),
+        "rule_count": len(rules),
+        "column_count": len(result.get("detected_columns", [])),
+        "columns_covered": result.get("detected_columns", []),
+        "rules": rules,
+        "summary": summary,
+    }
+
+    with open(cached_path, "w") as f:
+        json.dump(response, f, indent=2)
+
+    return response
+
+
+@app.get("/documents")
+def list_documents():
+    """List all ingested reference documents with their rule summaries."""
+    documents = []
+    for doc_path in DOCUMENTS_DIR.glob("*.json"):
+        try:
+            with open(doc_path, "r") as f:
+                doc = json.load(f)
+            # Return summary fields only — omit full rules array to keep response light
+            documents.append({
+                "document_id": doc.get("document_id"),
+                "filename": doc.get("filename"),
+                "document_type": doc.get("document_type"),
+                "ingested_at": doc.get("ingested_at"),
+                "rule_count": doc.get("rule_count"),
+                "column_count": doc.get("column_count"),
+                "columns_covered": doc.get("columns_covered"),
+                "summary": doc.get("summary"),
+            })
+        except Exception:
+            continue
+    return documents
+
+
+@app.get("/documents/{document_id}/rules")
+def get_document_rules(document_id: str):
+    """Get the full extracted DQ rules for a specific reference document."""
+    doc_path = DOCUMENTS_DIR / f"{document_id}.json"
+    if not doc_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No document found with id '{document_id}'"
+        )
+    with open(doc_path, "r") as f:
+        return json.load(f)
+
+
+@app.get("/documents/{document_id}/rules/export")
+def export_rules_as_dq_checks(document_id: str, format: str = "json"):
+    """
+    Export extracted rules in a format compatible with the DQ workflow.
+    format: "json" (default) | "sodacl" | "great_expectations"
+    """
+    doc_path = DOCUMENTS_DIR / f"{document_id}.json"
+    if not doc_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No document found with id '{document_id}'"
+        )
+    with open(doc_path, "r") as f:
+        doc = json.load(f)
+
+    rules = doc.get("rules", [])
+
+    if format == "json":
+        return rules
+
+    # TODO: implement sodacl export format
+    # TODO: implement great_expectations export format
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported export format '{format}'. Currently only 'json' is supported."
+    )
+
 
 if __name__ == "__main__":
     import uvicorn

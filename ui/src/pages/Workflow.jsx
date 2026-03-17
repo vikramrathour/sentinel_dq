@@ -4,7 +4,7 @@ import { Target, Upload, Brain, CheckSquare, Eye, Download, ChevronRight, CheckC
 const Workflow = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [workflowData, setWorkflowData] = useState({
-        goal: { id: '', description: '', threshold: 0.95 },
+        goal: { id: '', name: '', description: '', threshold: 0.90 },
         datasets: [],  // Changed from dataset to datasets (array)
         analysis: null,
         trustGraph: null,  // Added for knowledge graph
@@ -30,7 +30,7 @@ const Workflow = () => {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold mb-1">Sentinel-DQ Workflow</h1>
+                            <h1 className="text-3xl font-bold mb-1">OrianDQ Workflow</h1>
                             <p className="text-blue-200 text-sm">Powered by Xoriant ORIAN AI Platform</p>
                         </div>
                         <div className="text-right">
@@ -115,251 +115,391 @@ const Workflow = () => {
 const DefineGoalStep = ({ workflowData, setWorkflowData }) => {
     const [selectedGoalType, setSelectedGoalType] = useState('STANDARD_DQ');
     const [goalExplanation, setGoalExplanation] = useState(null);
-    const [showExplanation, setShowExplanation] = useState(false);
+    const [goalName, setGoalName] = useState(workflowData.goal.name || '');
+
+    // Auto-generate URN ID from friendly name
+    const toUrn = (name) => {
+        const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        return slug ? `urn:goal:${slug}` : '';
+    };
 
     useEffect(() => {
-        // Fetch goal explanation when goal type changes
         if (selectedGoalType) {
             fetch(`http://localhost:8000/explain/goal/${selectedGoalType}`)
                 .then(res => res.json())
                 .then(data => setGoalExplanation(data))
-                .catch(err => console.error('Failed to load explanation:', err));
+                .catch(() => {});
         }
     }, [selectedGoalType]);
 
-    const handleChange = (field, value) => {
+    const handleNameChange = (name) => {
+        setGoalName(name);
         setWorkflowData({
             ...workflowData,
-            goal: { ...workflowData.goal, [field]: value }
+            goal: { ...workflowData.goal, name, id: toUrn(name) }
         });
     };
 
+    const handleChange = (field, value) => {
+        setWorkflowData({ ...workflowData, goal: { ...workflowData.goal, [field]: value } });
+    };
+
     const goalTypes = [
-        { value: 'STANDARD_DQ', label: 'Standard Quality', icon: '📊', color: 'blue' },
-        { value: 'REGULATORY_DQ', label: 'Regulatory', icon: '📋', color: 'purple' },
-        { value: 'AI_DQ', label: 'AI/ML', icon: '🤖', color: 'indigo' }
+        {
+            value: 'STANDARD_DQ',
+            label: 'Standard Quality',
+            icon: '📊',
+            description: 'Check completeness, accuracy, and consistency of operational data.',
+            examples: ['Customer Data Completeness', 'Sales Report Validation', 'Product Catalog Accuracy', 'Order Data Integrity'],
+            activeClass: 'border-blue-500 bg-blue-50 shadow-lg',
+            badgeClass: 'bg-blue-100 text-blue-700',
+        },
+        {
+            value: 'REGULATORY_DQ',
+            label: 'Regulatory / Compliance',
+            icon: '📋',
+            description: 'Ensure data meets audit, SOX, GDPR, or BCBS standards before reporting.',
+            examples: ['GDPR Personal Data Audit', 'SOX Financial Reporting', 'BCBS Risk Data Check', 'AML Transaction Review'],
+            activeClass: 'border-purple-500 bg-purple-50 shadow-lg',
+            badgeClass: 'bg-purple-100 text-purple-700',
+        },
+        {
+            value: 'AI_DQ',
+            label: 'AI / ML Fitness',
+            icon: '🤖',
+            description: 'Validate training data quality, detect drift, and confirm model readiness.',
+            examples: ['Churn Prediction Data', 'Fraud Detection Features', 'Demand Forecasting Input', 'Recommendation Engine Data'],
+            activeClass: 'border-indigo-500 bg-indigo-50 shadow-lg',
+            badgeClass: 'bg-indigo-100 text-indigo-700',
+        },
+    ];
+
+    const selectedType = goalTypes.find(t => t.value === selectedGoalType);
+    const generatedId = toUrn(goalName);
+
+    const thresholdPresets = [
+        { label: 'Relaxed', value: 0.80, desc: 'Exploratory / dev' },
+        { label: 'Standard', value: 0.90, desc: 'Most use cases' },
+        { label: 'Strict', value: 0.95, desc: 'Production / reporting' },
+        { label: 'Critical', value: 0.99, desc: 'Regulatory / audit' },
     ];
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white">
-                        <Target size={24} />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Define Your Data Quality Goal</h2>
-                        <p className="text-gray-600">Set the objective and quality threshold for your data initiative</p>
-                    </div>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-8">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white shadow-md">
+                    <Target size={24} />
                 </div>
-                <button
-                    onClick={() => setShowExplanation(!showExplanation)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                >
-                    <Info size={18} />
-                    {showExplanation ? 'Hide' : 'Show'} Help
-                </button>
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Define Your Data Quality Goal</h2>
+                    <p className="text-gray-500 text-sm">Tell us what you want to achieve — we'll handle the technical setup</p>
+                </div>
             </div>
 
-            <div className="space-y-6">
-                {/* Goal Type Selection */}
+            <div className="space-y-8">
+
+                {/* Step A — Goal Type */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">Select Quality Goal Type</label>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">1</span>
+                        <label className="text-sm font-semibold text-gray-700">What kind of quality check are you running?</label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {goalTypes.map(type => (
-                            <div
+                            <button
                                 key={type.value}
+                                type="button"
                                 onClick={() => setSelectedGoalType(type.value)}
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                    selectedGoalType === type.value
-                                        ? `border-${type.color}-500 bg-${type.color}-50 shadow-lg`
-                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                className={`text-left p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                                    selectedGoalType === type.value ? type.activeClass : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
                                 }`}
                             >
-                                <div className="text-3xl mb-2">{type.icon}</div>
-                                <div className="font-bold text-gray-900">{type.label}</div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                    {type.value === 'STANDARD_DQ' && 'Operational data quality'}
-                                    {type.value === 'REGULATORY_DQ' && 'Compliance & audit ready'}
-                                    {type.value === 'AI_DQ' && 'ML model fitness'}
-                                </div>
-                            </div>
+                                <div className="text-3xl mb-3">{type.icon}</div>
+                                <div className="font-bold text-gray-900 mb-1">{type.label}</div>
+                                <div className="text-xs text-gray-500 leading-relaxed">{type.description}</div>
+                                {selectedGoalType === type.value && (
+                                    <div className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${type.badgeClass}`}>
+                                        <CheckCircle size={11} /> Selected
+                                    </div>
+                                )}
+                            </button>
                         ))}
                     </div>
                 </div>
 
-                {/* Goal Explanation Panel */}
-                {showExplanation && goalExplanation && (
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6 animate-in fade-in">
-                        <div className="flex items-start gap-3 mb-4">
-                            <Lightbulb className="text-blue-600 flex-shrink-0 mt-1" size={24} />
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-900 mb-2">{goalExplanation.title}</h3>
-                                <p className="text-blue-800 text-sm mb-4">{goalExplanation.explanation}</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="bg-white/60 rounded-lg p-3">
-                                <div className="text-xs font-semibold text-gray-600 mb-1">Threshold</div>
-                                <div className="text-2xl font-bold text-blue-700">{goalExplanation.threshold}</div>
-                            </div>
-                            <div className="bg-white/60 rounded-lg p-3">
-                                <div className="text-xs font-semibold text-gray-600 mb-1">Approval Required</div>
-                                <div className="text-2xl font-bold text-blue-700">
-                                    {goalExplanation.approval_required ? 'Yes' : 'No'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mb-4">
-                            <div className="text-sm font-semibold text-blue-900 mb-2">Use Cases:</div>
-                            <ul className="text-sm text-blue-800 space-y-1">
-                                {goalExplanation.use_cases?.map((uc, i) => (
-                                    <li key={i} className="flex items-start gap-2">
-                                        <span className="text-blue-600">•</span>
-                                        <span>{uc}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div>
-                            <div className="text-sm font-semibold text-blue-900 mb-2">What to Expect:</div>
-                            <ul className="text-sm text-blue-800 space-y-1">
-                                {goalExplanation.what_to_expect?.map((exp, i) => (
-                                    <li key={i} className="flex items-start gap-2">
-                                        <span className="text-green-600">✓</span>
-                                        <span>{exp}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
-
+                {/* Step B — Goal Name with examples */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Goal ID / Name</label>
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">2</span>
+                        <label htmlFor="goal-name" className="text-sm font-semibold text-gray-700">Give your goal a name</label>
+                    </div>
                     <input
+                        id="goal-name"
                         type="text"
-                        value={workflowData.goal.id}
-                        onChange={(e) => handleChange('id', e.target.value)}
-                        placeholder="e.g., urn:goal:customer_churn_prediction"
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition"
+                        value={goalName}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder={`e.g., ${selectedType?.examples[0] || 'Customer Data Quality'}`}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition text-gray-900"
                     />
+                    {/* Quick-pick examples */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        <span className="text-xs text-gray-400 self-center">Try:</span>
+                        {selectedType?.examples.map(ex => (
+                            <button
+                                key={ex}
+                                type="button"
+                                onClick={() => handleNameChange(ex)}
+                                className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700 border border-gray-200 hover:border-blue-300 transition"
+                            >
+                                {ex}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Generated URN preview */}
+                    {generatedId && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+                            <span className="font-medium text-gray-500">System ID:</span>
+                            <code className="bg-gray-100 px-2 py-0.5 rounded font-mono text-gray-500">{generatedId}</code>
+                        </div>
+                    )}
                 </div>
 
+                {/* Step C — Description */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">3</span>
+                        <label htmlFor="goal-description" className="text-sm font-semibold text-gray-700">Briefly describe the business objective <span className="text-gray-400 font-normal">(optional)</span></label>
+                    </div>
                     <textarea
+                        id="goal-description"
                         value={workflowData.goal.description}
                         onChange={(e) => handleChange('description', e.target.value)}
-                        placeholder="Describe the business objective and expected outcomes..."
-                        rows={4}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition"
+                        placeholder="e.g., Ensure customer records are complete and accurate before loading into the CRM for the Q2 marketing campaign."
+                        rows={3}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition text-gray-900 resize-none"
                     />
                 </div>
 
+                {/* Step D — Threshold */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Definition of Done (DoD) Threshold
-                    </label>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">4</span>
+                        <label className="text-sm font-semibold text-gray-700">How strict should the quality bar be?</label>
+                    </div>
+                    {/* Preset buttons */}
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                        {thresholdPresets.map(preset => (
+                            <button
+                                key={preset.value}
+                                type="button"
+                                onClick={() => handleChange('threshold', preset.value)}
+                                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                                    Math.abs(workflowData.goal.threshold - preset.value) < 0.001
+                                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                            >
+                                <div className="text-lg font-black text-gray-900">{(preset.value * 100).toFixed(0)}%</div>
+                                <div className="text-xs font-semibold text-gray-700 mt-0.5">{preset.label}</div>
+                                <div className="text-xs text-gray-400 mt-0.5">{preset.desc}</div>
+                            </button>
+                        ))}
+                    </div>
+                    {/* Fine-tune slider */}
+                    <div className="flex items-center gap-4 px-1">
+                        <span className="text-xs text-gray-400 w-10">80%</span>
                         <input
                             type="range"
-                            min="0"
+                            min="0.80"
                             max="1"
                             step="0.01"
                             value={workflowData.goal.threshold}
                             onChange={(e) => handleChange('threshold', parseFloat(e.target.value))}
-                            className="flex-1"
+                            className="flex-1 accent-blue-600"
+                            aria-label="Quality threshold slider"
                         />
-                        <div className="w-24 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-center font-bold text-lg">
+                        <span className="text-xs text-gray-400 w-10 text-right">100%</span>
+                        <div className="w-20 px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-center font-bold">
                             {(workflowData.goal.threshold * 100).toFixed(0)}%
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                        Minimum quality score required to pass validation
-                    </p>
                 </div>
 
-                <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                    <p className="text-sm text-blue-900">
-                        <strong>Tip:</strong> A higher threshold ensures stricter data quality but may require more effort to achieve. 
-                        Typical values range from 85% to 95% depending on your use case.
-                    </p>
-                </div>
+                {/* AI Explanation Panel — auto-shown */}
+                {goalExplanation && (
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-5">
+                        <div className="flex items-start gap-3">
+                            <Lightbulb className="text-blue-500 flex-shrink-0 mt-0.5" size={20} />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-bold text-blue-900">{goalExplanation.title}</span>
+                                    <span className="text-xs text-blue-400">AI-generated guidance</span>
+                                </div>
+                                <p className="text-sm text-blue-800 mb-3 leading-relaxed">{goalExplanation.explanation}</p>
+                                {goalExplanation.use_cases?.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {goalExplanation.use_cases.slice(0, 3).map((uc, i) => (
+                                            <span key={i} className="text-xs bg-white/70 text-blue-700 border border-blue-200 px-2 py-1 rounded-full">{uc}</span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
     );
 };
 
-// Step 2: Upload Dataset (Multiple Files Support)
+// File role detection — used by UploadDatasetStep
+const detectFileRole = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['xsd', 'yaml', 'yml', 'docx'].includes(ext)) return 'reference';
+    if (ext === 'json') return 'reference'; // JSON Schema — server validates
+    if (['csv', 'parquet', 'xlsx', 'xls', 'xml'].includes(ext)) return 'data';
+    return 'unknown';
+};
+
+const FILE_ROLE_CONFIG = {
+    data: {
+        label: '📊 Data File',
+        badgeClass: 'bg-purple-100 text-purple-700 border-purple-300',
+        borderClass: 'border-purple-300',
+        bgClass: 'bg-purple-50',
+        endpoint: '/ingest',
+        description: 'Will be statistically profiled'
+    },
+    reference: {
+        label: '📋 Reference Doc',
+        badgeClass: 'bg-amber-100 text-amber-700 border-amber-300',
+        borderClass: 'border-amber-300',
+        bgClass: 'bg-amber-50',
+        endpoint: '/ingest-document',
+        description: 'DQ rules will be extracted'
+    },
+    unknown: {
+        label: '❓ Unknown',
+        badgeClass: 'bg-gray-100 text-gray-600 border-gray-300',
+        borderClass: 'border-red-300',
+        bgClass: 'bg-red-50',
+        endpoint: null,
+        description: 'Unsupported format'
+    }
+};
+
+// Step 2: Upload Dataset — sends files to /ingest or /ingest-document based on detected role
 const UploadDatasetStep = ({ workflowData, setWorkflowData }) => {
     const [dragActive, setDragActive] = useState(false);
-    const [files, setFiles] = useState(workflowData.datasets || []);
+    const [files, setFiles] = useState([
+        ...(workflowData.datasets || []),
+        ...(workflowData.refDocuments || []),
+    ]);
+    const [expandedRules, setExpandedRules] = useState({});
 
     const handleDrag = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
+        if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+        else if (e.type === "dragleave") setDragActive(false);
     };
 
     const handleDrop = (e) => {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0)
             handleFiles(Array.from(e.dataTransfer.files));
-        }
     };
 
     const handleChange = (e) => {
         e.preventDefault();
-        if (e.target.files && e.target.files.length > 0) {
+        if (e.target.files && e.target.files.length > 0)
             handleFiles(Array.from(e.target.files));
-        }
     };
 
-    const handleFiles = (newFiles) => {
-        const validFiles = newFiles.filter(file => {
-            const isValid = file.name.endsWith('.csv') || file.name.endsWith('.parquet');
-            const isUnderLimit = file.size <= 100 * 1024 * 1024; // 100MB
-            return isValid && isUnderLimit;
-        });
+    const handleFiles = async (newFiles) => {
+        // Filter oversized files first
+        const sizedFiles = newFiles.filter(f => f.size <= 100 * 1024 * 1024);
 
-        const fileObjects = validFiles.map(file => ({
-            name: file.name,
-            size: file.size,
-            type: file.type || (file.name.endsWith('.csv') ? 'text/csv' : 'application/parquet'),
-            file: file,
-            id: `${file.name}-${Date.now()}`
+        // Detect role and skip unknown
+        const roledFiles = sizedFiles.map(f => ({ f, role: detectFileRole(f.name) }));
+        const skipped = roledFiles.filter(({ role }) => role === 'unknown');
+        const validRoled = roledFiles.filter(({ role }) => role !== 'unknown');
+
+        if (skipped.length > 0) {
+            console.warn('Skipped unsupported files:', skipped.map(({ f }) => f.name).join(', '));
+        }
+
+        if (validRoled.length === 0) return;
+
+        // Build placeholders with role info
+        const placeholders = validRoled.map(({ f, role }) => ({
+            name: f.name,
+            size: f.size,
+            file: f,
+            id: `${f.name}-${Date.now()}`,
+            role,
+            roleConfig: FILE_ROLE_CONFIG[role],
+            uploading: true,
+            profile: null,
+            docResult: null,
+            error: null,
         }));
 
-        const updatedFiles = [...files, ...fileObjects];
+        const withPlaceholders = [...files, ...placeholders];
+        setFiles(withPlaceholders);
+        const dataPlaceholders = withPlaceholders.filter(f => f.role === 'data');
+        const refPlaceholders = withPlaceholders.filter(f => f.role === 'reference');
+        setWorkflowData({ ...workflowData, datasets: dataPlaceholders, refDocuments: refPlaceholders });
+
+        // Upload in parallel — route to correct endpoint by role
+        const uploaded = await Promise.all(placeholders.map(async (fileObj) => {
+            const endpoint = fileObj.roleConfig.endpoint;
+            try {
+                const formData = new FormData();
+                formData.append('file', fileObj.file);
+                const res = await fetch(endpoint, { method: 'POST', body: formData });
+                if (!res.ok) throw new Error(`Server error ${res.status}`);
+                const result = await res.json();
+                if (fileObj.role === 'data') {
+                    return { ...fileObj, uploading: false, profile: result, docResult: null, error: null };
+                } else {
+                    return { ...fileObj, uploading: false, profile: null, docResult: result, error: null };
+                }
+            } catch (err) {
+                return { ...fileObj, uploading: false, profile: null, docResult: null, error: err.message };
+            }
+        }));
+
+        const updatedFiles = [...files, ...uploaded];
         setFiles(updatedFiles);
-        setWorkflowData({
-            ...workflowData,
-            datasets: updatedFiles
-        });
+        const dataFiles = updatedFiles.filter(f => f.role === 'data');
+        const refDocs = updatedFiles.filter(f => f.role === 'reference');
+        setWorkflowData({ ...workflowData, datasets: dataFiles, refDocuments: refDocs });
     };
 
     const removeFile = (fileId) => {
-        const updatedFiles = files.filter(f => f.id !== fileId);
-        setFiles(updatedFiles);
-        setWorkflowData({
-            ...workflowData,
-            datasets: updatedFiles
-        });
+        const updated = files.filter(f => f.id !== fileId);
+        setFiles(updated);
+        const dataFiles = updated.filter(f => f.role === 'data');
+        const refDocs = updated.filter(f => f.role === 'reference');
+        setWorkflowData({ ...workflowData, datasets: dataFiles, refDocuments: refDocs });
     };
+
+    const toggleRules = (fileId) => {
+        setExpandedRules(prev => ({ ...prev, [fileId]: !prev[fileId] }));
+    };
+
+    const dataCount = files.filter(f => f.role === 'data').length;
+    const refCount = files.filter(f => f.role === 'reference').length;
+    const readyCount = files.filter(f => (f.profile || f.docResult) && !f.uploading).length;
 
     return (
         <div>
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white">
@@ -367,212 +507,396 @@ const UploadDatasetStep = ({ workflowData, setWorkflowData }) => {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">Upload Your Datasets</h2>
-                        <p className="text-gray-600">Upload one or more CSV or Parquet files for quality analysis</p>
+                        <p className="text-gray-600">Data files + Reference documents — upload together</p>
                     </div>
                 </div>
                 {files.length > 0 && (
-                    <div className="text-right">
-                        <div className="text-sm text-gray-600">Files Uploaded</div>
-                        <div className="text-2xl font-bold text-purple-700">{files.length}</div>
+                    <div className="flex items-center gap-3">
+                        {dataCount > 0 && (
+                            <span className="px-3 py-1 bg-purple-100 text-purple-700 border border-purple-300 text-sm font-semibold rounded-full">
+                                📊 {dataCount} Data {dataCount === 1 ? 'File' : 'Files'}
+                            </span>
+                        )}
+                        {refCount > 0 && (
+                            <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-300 text-sm font-semibold rounded-full">
+                                📋 {refCount} Reference {refCount === 1 ? 'Doc' : 'Docs'}
+                            </span>
+                        )}
+                        {readyCount > 0 && (
+                            <div className="text-right">
+                                <div className="text-xs text-gray-500">Ready</div>
+                                <div className="text-2xl font-bold text-purple-700">{readyCount}</div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* Upload Area */}
+            {/* Drop zone */}
             <div
-                className={`relative border-3 border-dashed rounded-xl p-8 text-center transition-all mb-6 ${
+                className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all mb-4 ${
                     dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'
                 }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
+                onDragEnter={handleDrag} onDragLeave={handleDrag}
+                onDragOver={handleDrag} onDrop={handleDrop}
             >
-                <input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    accept=".csv,.parquet"
-                    multiple
-                    onChange={handleChange}
-                />
-                
+                <input type="file" id="file-upload" className="hidden"
+                    accept=".csv,.parquet,.xlsx,.xls,.json,.xml,.xsd,.yaml,.yml,.docx"
+                    multiple onChange={handleChange} />
                 <Upload size={48} className="mx-auto text-gray-400 mb-3" />
-                <p className="text-lg font-semibold text-gray-700 mb-2">
-                    Drag and drop your datasets here
-                </p>
+                <p className="text-lg font-semibold text-gray-700 mb-2">Drag and drop your files here</p>
                 <p className="text-sm text-gray-500 mb-4">or</p>
-                <label
-                    htmlFor="file-upload"
-                    className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold cursor-pointer hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
-                >
+                <label htmlFor="file-upload"
+                    className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold cursor-pointer hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
                     Browse Files
                 </label>
-                <p className="text-xs text-gray-500 mt-4">
-                    Supported formats: CSV, Parquet | Max 100MB per file | Multiple files allowed
-                </p>
+                <div
+                    className="text-xs text-gray-500 mt-4 space-y-1"
+                    title="Data files are statistically profiled. Reference documents (JSON Schema, XSD, YAML) have DQ rules extracted from them."
+                >
+                    <p>Data: CSV, Parquet, XLSX, JSON, XML</p>
+                    <p>Reference Docs: JSON Schema, XSD, YAML contracts, DOCX data dictionary</p>
+                </div>
             </div>
 
-            {/* Uploaded Files List */}
+            {/* Info banner */}
+            <div className="flex gap-4 text-xs text-gray-500 bg-gray-50 rounded-lg p-3 border border-gray-200 mb-6">
+                <div className="flex items-start gap-1.5">
+                    <span>📊</span>
+                    <span><strong className="text-gray-700">Data Files</strong> are statistically profiled — null rates, distributions, patterns detected</span>
+                </div>
+                <div className="w-px bg-gray-200 self-stretch" />
+                <div className="flex items-start gap-1.5">
+                    <span>📋</span>
+                    <span><strong className="text-gray-700">Reference Docs</strong> (JSON Schema, XSD, YAML, DOCX data dictionary) have DQ rules extracted — these rules guide quality checks</span>
+                </div>
+            </div>
+
+            {/* File list */}
             {files.length > 0 && (
                 <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Uploaded Files ({files.length})</h3>
-                    {files.map((file) => (
-                        <div key={file.id} className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 flex-1">
-                                    <CheckCircle size={24} className="text-green-600 flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <div className="font-semibold text-gray-900">{file.name}</div>
-                                        <div className="text-sm text-gray-600 mt-1">
-                                            {(file.size / 1024).toFixed(2)} KB • {file.type || 'Unknown type'}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Files ({files.length})</h3>
+                    {files.map((file) => {
+                        const roleConfig = file.roleConfig || FILE_ROLE_CONFIG[file.role] || FILE_ROLE_CONFIG.unknown;
+                        const isData = file.role === 'data';
+                        const isRef = file.role === 'reference';
+                        const docResult = file.docResult;
+                        const rulesVisible = expandedRules[file.id] || false;
+                        const previewRules = docResult?.rules?.slice(0, 5) || [];
+                        const extraRules = docResult?.rules ? Math.max(0, docResult.rules.length - 5) : 0;
+
+                        const borderClass = file.error
+                            ? 'border-red-300 bg-red-50'
+                            : file.uploading
+                                ? 'border-gray-200'
+                                : isRef && docResult
+                                    ? 'border-amber-300'
+                                    : isData && file.profile
+                                        ? 'border-green-300'
+                                        : 'border-gray-200';
+
+                        return (
+                            <div key={file.id} className={`bg-white border-2 rounded-lg p-4 transition ${borderClass}`}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-4 flex-1">
+                                        {/* Status icon */}
+                                        {file.uploading
+                                            ? <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5" />
+                                            : file.error
+                                                ? <span className="text-red-600 font-bold flex-shrink-0 mt-0.5">✗</span>
+                                                : <CheckCircle size={24} className={`flex-shrink-0 mt-0.5 ${isRef ? 'text-amber-500' : 'text-green-600'}`} />
+                                        }
+                                        <div className="flex-1 min-w-0">
+                                            {/* File name row + role badge */}
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-semibold text-gray-900">{file.name}</span>
+                                                {/* Role badge */}
+                                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${roleConfig.badgeClass}`}>
+                                                    {roleConfig.label}
+                                                </span>
+                                                {/* Cached badge (data files) */}
+                                                {isData && file.profile?.cached && (
+                                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-300">
+                                                        ⚡ Cached Profile
+                                                    </span>
+                                                )}
+                                                {/* Uploading badge */}
+                                                {file.uploading && (
+                                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${isRef ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'}`}>
+                                                        {isRef ? 'Extracting rules...' : 'Profiling...'}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* File meta */}
+                                            <div className="text-sm text-gray-600 mt-1">
+                                                {(file.size / 1024).toFixed(2)} KB
+                                                {/* Data file stats */}
+                                                {isData && file.profile && (
+                                                    <> • <strong>{file.profile.row_count?.toLocaleString()}</strong> rows
+                                                       • <strong>{file.profile.column_count}</strong> columns
+                                                       • <strong>{file.profile.data_types?.numeric || 0}</strong> numeric
+                                                       • <strong>{file.profile.data_types?.categorical || 0}</strong> categorical
+                                                    </>
+                                                )}
+                                                {file.error && <span className="text-red-600 ml-2">Error: {file.error}</span>}
+                                            </div>
+
+                                            {/* Reference doc result summary */}
+                                            {isRef && docResult && (
+                                                <div className="mt-2">
+                                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                                        <div className="bg-amber-50 rounded-lg p-2">
+                                                            <div className="text-lg font-bold text-amber-700">{docResult.rule_count}</div>
+                                                            <div className="text-xs text-gray-500">Rules Extracted</div>
+                                                        </div>
+                                                        <div className="bg-amber-50 rounded-lg p-2">
+                                                            <div className="text-lg font-bold text-amber-700">{docResult.column_count}</div>
+                                                            <div className="text-xs text-gray-500">Columns Covered</div>
+                                                        </div>
+                                                        <div className="bg-amber-50 rounded-lg p-2">
+                                                            <div className="text-sm font-bold text-amber-700">{docResult.document_type?.replace('_', ' ')}</div>
+                                                            <div className="text-xs text-gray-500">Doc Type</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Collapsible rules list */}
+                                                    {docResult.rules && docResult.rules.length > 0 && (
+                                                        <div className="mt-2">
+                                                            <button
+                                                                onClick={() => toggleRules(file.id)}
+                                                                className="text-xs text-amber-700 hover:text-amber-900 font-semibold underline underline-offset-2 transition"
+                                                            >
+                                                                {rulesVisible ? 'Hide Rules ▲' : `View Rules ▼`}
+                                                            </button>
+                                                            {rulesVisible && (
+                                                                <ul className="mt-2 space-y-1 text-xs text-gray-700 bg-amber-50 rounded-lg p-3 border border-amber-200">
+                                                                    {previewRules.map((rule, i) => (
+                                                                        <li key={i} className="flex gap-1">
+                                                                            <span className="text-amber-500 flex-shrink-0">•</span>
+                                                                            <span>
+                                                                                <strong>{rule.rule_type}</strong>
+                                                                                {rule.column ? `: ${rule.column}` : ''}
+                                                                                {rule.description ? ` — ${rule.description}` : ''}
+                                                                            </span>
+                                                                        </li>
+                                                                    ))}
+                                                                    {extraRules > 0 && (
+                                                                        <li className="text-gray-400 italic">+{extraRules} more rules</li>
+                                                                    )}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
+                                    <button onClick={() => removeFile(file.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition ml-2 flex-shrink-0">
+                                        <X size={20} />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => removeFile(file.id)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                    title="Remove file"
-                                >
-                                    <X size={20} />
-                                </button>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
     );
 };
 
-// Step 3: Generate Analysis
+// Step 3: Generate Analysis — aggregates real profiles from uploaded datasets
 const GenerateAnalysisStep = ({ workflowData, setWorkflowData }) => {
     const [analyzing, setAnalyzing] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [expandedDataset, setExpandedDataset] = useState(null);
 
-    const handleAnalyze = async () => {
-        if (!workflowData.datasets || workflowData.datasets.length === 0) {
+    const handleAnalyze = () => {
+        const profiledDatasets = (workflowData.datasets || []).filter(d => d.profile);
+        if (profiledDatasets.length === 0) {
             alert('Please upload at least one dataset first');
             return;
         }
 
         setAnalyzing(true);
-        setProgress(0);
 
-        // In a real implementation, you would upload files to the backend here
-        // For now, we'll simulate the analysis
-        const interval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(interval);
-                    setAnalyzing(false);
-                    
-                    // Generate analysis results based on uploaded files
-                    const totalRows = workflowData.datasets.reduce((sum, ds) => sum + Math.floor(Math.random() * 10000), 0);
-                    const analysis = {
-                        datasets: workflowData.datasets.map(ds => ({
-                            name: ds.name,
-                            columns: Math.floor(Math.random() * 20) + 5,
-                            rows: Math.floor(Math.random() * 10000) + 1000,
-                            size: ds.size
-                        })),
-                        totalColumns: workflowData.datasets.reduce((sum, ds) => sum + (Math.floor(Math.random() * 20) + 5), 0),
-                        totalRows: totalRows,
-                        nullValues: Math.floor(totalRows * 0.01),
-                        duplicates: Math.floor(totalRows * 0.002),
-                        dataTypes: { 
-                            numeric: Math.floor(Math.random() * 10) + 3, 
-                            categorical: Math.floor(Math.random() * 8) + 2,
-                            datetime: Math.floor(Math.random() * 3) + 1
-                        }
-                    };
-                    
-                    setWorkflowData({
-                        ...workflowData,
-                        analysis: analysis
-                    });
-                    return 100;
-                }
-                return prev + 10;
-            });
-        }, 300);
+        // Aggregate real profile data — no simulation
+        setTimeout(() => {
+            const profiles = profiledDatasets.map(d => d.profile);
+            const totalRows = profiles.reduce((s, p) => s + (p.row_count || 0), 0);
+            const totalColumns = profiles.reduce((s, p) => s + (p.column_count || 0), 0);
+            const totalNulls = profiles.reduce((s, p) => s + (p.total_null_count || 0), 0);
+            const totalDuplicates = profiles.reduce((s, p) => s + (p.duplicate_count || 0), 0);
+            const dataTypes = profiles.reduce((acc, p) => {
+                acc.numeric = (acc.numeric || 0) + (p.data_types?.numeric || 0);
+                acc.categorical = (acc.categorical || 0) + (p.data_types?.categorical || 0);
+                acc.datetime = (acc.datetime || 0) + (p.data_types?.datetime || 0);
+                return acc;
+            }, {});
+
+            const analysis = {
+                datasets: profiles.map((p, i) => ({
+                    name: p.filename,
+                    columns: p.column_count,
+                    rows: p.row_count,
+                    size: profiledDatasets[i].size,
+                    cached: p.cached,
+                    nullCount: p.total_null_count,
+                    duplicates: p.duplicate_count,
+                    dataTypes: p.data_types,
+                    profile: p,
+                })),
+                totalColumns,
+                totalRows,
+                nullValues: totalNulls,
+                duplicates: totalDuplicates,
+                dataTypes,
+                allColumns: profiles.flatMap(p => p.columns || []),
+            };
+
+            setWorkflowData({ ...workflowData, analysis });
+            setAnalyzing(false);
+        }, 400); // small delay for UX feedback
+
     };
+
+    const profiledCount = (workflowData.datasets || []).filter(d => d.profile).length;
 
     return (
         <div>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white">
-                    <Brain size={24} />
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white">
+                        <Brain size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Generate Data Analysis</h2>
+                        <p className="text-gray-600">Real statistical profiles from your uploaded datasets</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Generate Data Analysis</h2>
-                    <p className="text-gray-600">AI-powered profiling and quality assessment</p>
-                </div>
+                {workflowData.analysis && (
+                    <button onClick={() => { setWorkflowData({ ...workflowData, analysis: null }); }}
+                        className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                        Re-analyse
+                    </button>
+                )}
             </div>
 
             {!workflowData.analysis ? (
                 <div className="text-center py-12">
                     <Brain size={64} className="mx-auto text-indigo-600 mb-6" />
-                    <p className="text-gray-600 mb-6">
-                        Click below to start AI-powered analysis of your {workflowData.datasets?.length || 0} dataset(s)
+                    <p className="text-gray-600 mb-2">
+                        {profiledCount} dataset{profiledCount !== 1 ? 's' : ''} ready for analysis
                     </p>
-                    <button
-                        onClick={handleAnalyze}
-                        disabled={analyzing || !workflowData.datasets || workflowData.datasets.length === 0}
-                        className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-lg"
-                    >
-                        {analyzing ? 'Analyzing...' : 'Start Analysis'}
+                    <p className="text-sm text-gray-500 mb-6">Profiles were captured during upload — aggregation is instant</p>
+                    <button onClick={handleAnalyze}
+                        disabled={analyzing || profiledCount === 0}
+                        className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-lg">
+                        {analyzing ? 'Aggregating...' : 'Build Analysis'}
                     </button>
-
-                    {analyzing && (
-                        <div className="mt-8 max-w-md mx-auto">
-                            <div className="bg-gray-200 rounded-full h-4 overflow-hidden">
-                                <div
-                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full transition-all duration-300"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2">{progress}% Complete</p>
-                        </div>
-                    )}
                 </div>
             ) : (
                 <div>
-                    {/* Overall Statistics */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200">
-                            <div className="text-3xl font-bold text-blue-700">{workflowData.analysis.totalColumns}</div>
-                            <div className="text-sm text-blue-600 font-semibold mt-1">Total Columns</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border-2 border-purple-200">
-                            <div className="text-3xl font-bold text-purple-700">{workflowData.analysis.totalRows.toLocaleString()}</div>
-                            <div className="text-sm text-purple-600 font-semibold mt-1">Total Rows</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border-2 border-orange-200">
-                            <div className="text-3xl font-bold text-orange-700">{workflowData.analysis.nullValues}</div>
-                            <div className="text-sm text-orange-600 font-semibold mt-1">Null Values</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200">
-                            <div className="text-3xl font-bold text-green-700">{workflowData.analysis.duplicates}</div>
-                            <div className="text-sm text-green-600 font-semibold mt-1">Duplicates</div>
-                        </div>
+                    {/* Summary cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        {[
+                            { label: 'Total Columns', value: workflowData.analysis.totalColumns, color: 'blue' },
+                            { label: 'Total Rows', value: workflowData.analysis.totalRows?.toLocaleString(), color: 'purple' },
+                            { label: 'Null Values', value: workflowData.analysis.nullValues, color: 'orange' },
+                            { label: 'Duplicates', value: workflowData.analysis.duplicates, color: 'green' },
+                        ].map(({ label, value, color }) => (
+                            <div key={label} className={`bg-gradient-to-br from-${color}-50 to-${color}-100 p-6 rounded-xl border-2 border-${color}-200`}>
+                                <div className={`text-3xl font-bold text-${color}-700`}>{value}</div>
+                                <div className={`text-sm text-${color}-600 font-semibold mt-1`}>{label}</div>
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Per-Dataset Breakdown */}
-                    <div className="mb-6">
+                    {/* Data type breakdown */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                        {[
+                            { label: 'Numeric', count: workflowData.analysis.dataTypes?.numeric || 0, color: 'blue' },
+                            { label: 'Categorical', count: workflowData.analysis.dataTypes?.categorical || 0, color: 'violet' },
+                            { label: 'Datetime', count: workflowData.analysis.dataTypes?.datetime || 0, color: 'teal' },
+                        ].map(({ label, count, color }) => (
+                            <div key={label} className={`bg-${color}-50 border border-${color}-200 rounded-lg p-4 text-center`}>
+                                <div className={`text-2xl font-bold text-${color}-700`}>{count}</div>
+                                <div className={`text-xs font-semibold text-${color}-600 mt-1`}>{label} columns</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Per-dataset breakdown with expandable column profiles */}
+                    <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Dataset Breakdown</h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {workflowData.analysis.datasets?.map((ds, idx) => (
-                                <div key={idx} className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-gray-900">{ds.name}</div>
-                                            <div className="text-sm text-gray-600 mt-1">
-                                                {ds.columns} columns • {ds.rows.toLocaleString()} rows • {(ds.size / 1024).toFixed(2)} KB
+                                <div key={idx} className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden">
+                                    <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                                        onClick={() => setExpandedDataset(expandedDataset === idx ? null : idx)}>
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-gray-900">{ds.name}</span>
+                                                    {ds.cached && (
+                                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-300">⚡ Cached</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-sm text-gray-600 mt-0.5">
+                                                    {ds.columns} cols • {ds.rows?.toLocaleString()} rows •
+                                                    {ds.nullCount} nulls • {ds.duplicates} dupes
+                                                </div>
                                             </div>
                                         </div>
-                                        <CheckCircle className="text-green-600" size={24} />
+                                        <span className="text-gray-400 text-sm">{expandedDataset === idx ? '▲ Hide' : '▼ Columns'}</span>
                                     </div>
+
+                                    {expandedDataset === idx && ds.profile?.columns && (
+                                        <div className="border-t border-gray-200 overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        {['Column', 'Type', 'Nulls', 'Null %', 'Unique', 'Cardinality %', 'Stats'].map(h => (
+                                                            <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {ds.profile.columns.map((col, ci) => (
+                                                        <tr key={ci} className="hover:bg-gray-50">
+                                                            <td className="px-4 py-2 font-medium text-gray-900">{col.name}</td>
+                                                            <td className="px-4 py-2">
+                                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                                                    col.data_type === 'numeric' ? 'bg-blue-100 text-blue-700' :
+                                                                    col.data_type === 'datetime' ? 'bg-teal-100 text-teal-700' :
+                                                                    'bg-violet-100 text-violet-700'
+                                                                }`}>{col.data_type}</span>
+                                                            </td>
+                                                            <td className="px-4 py-2 text-gray-700">{col.null_count}</td>
+                                                            <td className="px-4 py-2">
+                                                                <span className={col.null_rate > 0.1 ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+                                                                    {(col.null_rate * 100).toFixed(1)}%
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-2 text-gray-700">{col.unique_count}</td>
+                                                            <td className="px-4 py-2 text-gray-700">{(col.cardinality_rate * 100).toFixed(1)}%</td>
+                                                            <td className="px-4 py-2 text-gray-500 text-xs max-w-xs truncate">
+                                                                {col.data_type === 'numeric' && col.stats
+                                                                    ? `min ${col.stats.min} · max ${col.stats.max} · mean ${col.stats.mean}`
+                                                                    : col.data_type === 'datetime' && col.stats
+                                                                    ? `${col.stats.min_date?.slice(0,10)} → ${col.stats.max_date?.slice(0,10)}`
+                                                                    : col.stats?.top_values
+                                                                    ? Object.keys(col.stats.top_values).slice(0,3).join(', ')
+                                                                    : '—'
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -597,44 +921,56 @@ const TrustGraphStep = ({ workflowData, setWorkflowData }) => {
 
     const generateTrustGraph = () => {
         setLoading(true);
-        
-        // Simulate trust graph generation
+
         setTimeout(() => {
+            // Use real columns from profile; fall back to sample names
+            const allCols = workflowData.analysis?.allColumns || [];
+            const topCols = allCols.length > 0
+                ? allCols.slice(0, 8)
+                : [
+                    { name: 'customer_id', data_type: 'categorical' },
+                    { name: 'email', data_type: 'categorical' },
+                    { name: 'purchase_amount', data_type: 'numeric' },
+                    { name: 'status', data_type: 'categorical' },
+                  ];
+
+            // Auto-generate simple business glossary mapping from column names
+            const glossaryMap = {};
+            topCols.forEach(col => {
+                const n = col.name.toLowerCase();
+                if (/customer|client|user/.test(n)) glossaryMap[col.name] = 'Customer';
+                else if (/order|transaction|purchase|payment/.test(n)) glossaryMap[col.name] = 'Transaction';
+                else if (/product|item|sku/.test(n)) glossaryMap[col.name] = 'Product';
+                else if (/date|time|created|updated/.test(n)) glossaryMap[col.name] = 'Temporal';
+            });
+            const glossaryTerms = [...new Set(Object.values(glossaryMap))];
+
+            const datasetNodes = (workflowData.analysis.datasets || []).map((ds, idx) => ({
+                id: `dataset_${idx}`, label: ds.name, type: 'dataset', color: '#7c3aed'
+            }));
+            const columnNodes = topCols.map(col => ({
+                id: `col_${col.name}`, label: col.name, type: 'column', color: '#2563eb', data_type: col.data_type
+            }));
+            const glossNodes = glossaryTerms.map(term => ({
+                id: `gloss_${term}`, label: term, type: 'glossary', color: '#059669'
+            }));
+
+            const dsEdges = topCols.map(col => ({
+                from: 'dataset_0', to: `col_${col.name}`, label: 'contains'
+            }));
+            const glossEdges = Object.entries(glossaryMap).map(([colName, term]) => ({
+                from: `col_${colName}`, to: `gloss_${term}`, label: 'represents'
+            }));
+
             const graph = {
-                nodes: [
-                    // Dataset nodes
-                    ...workflowData.analysis.datasets.map((ds, idx) => ({
-                        id: `dataset_${idx}`,
-                        label: ds.name,
-                        type: 'dataset',
-                        color: '#7c3aed'
-                    })),
-                    // Column nodes (sample)
-                    { id: 'col_customer_id', label: 'customer_id', type: 'column', color: '#2563eb' },
-                    { id: 'col_email', label: 'email', type: 'column', color: '#2563eb' },
-                    { id: 'col_purchase_amount', label: 'purchase_amount', type: 'column', color: '#2563eb' },
-                    { id: 'col_status', label: 'status', type: 'column', color: '#2563eb' },
-                    // Glossary nodes
-                    { id: 'gloss_customer', label: 'Customer', type: 'glossary', color: '#059669' },
-                    { id: 'gloss_transaction', label: 'Transaction', type: 'glossary', color: '#059669' },
-                ],
-                edges: [
-                    // Dataset to Column relationships
-                    { from: 'dataset_0', to: 'col_customer_id', label: 'contains' },
-                    { from: 'dataset_0', to: 'col_email', label: 'contains' },
-                    { from: 'dataset_0', to: 'col_purchase_amount', label: 'contains' },
-                    { from: 'dataset_0', to: 'col_status', label: 'contains' },
-                    // Column to Glossary relationships
-                    { from: 'col_customer_id', to: 'gloss_customer', label: 'represents' },
-                    { from: 'col_email', to: 'gloss_customer', label: 'represents' },
-                    { from: 'col_purchase_amount', to: 'gloss_transaction', label: 'represents' },
-                ],
+                nodes: [...datasetNodes, ...columnNodes, ...glossNodes],
+                edges: [...dsEdges, ...glossEdges],
                 stats: {
-                    totalNodes: 10,
-                    totalEdges: 7,
-                    datasets: workflowData.analysis.datasets.length,
-                    columns: 4,
-                    glossaryTerms: 2
+                    totalNodes: datasetNodes.length + columnNodes.length + glossNodes.length,
+                    totalEdges: dsEdges.length + glossEdges.length,
+                    datasets: datasetNodes.length,
+                    columns: columnNodes.length,
+                    glossaryTerms: glossNodes.length,
                 }
             };
             
@@ -772,16 +1108,58 @@ const TrustGraphStep = ({ workflowData, setWorkflowData }) => {
     );
 };
 
-// Step 5: Identify CDEs
+// Compute CDE importance score from real profile column data
+const computeImportance = (col) => {
+    let score = 0.5;
+    const name = col.name.toLowerCase();
+
+    // Name heuristics
+    if (/\b(id|key|identifier)\b/.test(name)) score += 0.35;
+    else if (/\b(email|phone|mobile|contact)\b/.test(name)) score += 0.30;
+    else if (/\b(amount|price|value|revenue|cost|total)\b/.test(name)) score += 0.28;
+    else if (/\b(date|time|created|updated|timestamp)\b/.test(name)) score += 0.20;
+    else if (/\b(status|state|type|category|class)\b/.test(name)) score += 0.18;
+    else if (/\b(name|title|label)\b/.test(name)) score += 0.15;
+
+    // Low null rate = more important
+    const nullPenalty = (col.null_rate || 0) * 0.3;
+    score -= nullPenalty;
+
+    // High cardinality categorical = likely an identifier
+    if (col.data_type === 'categorical' && (col.cardinality_rate || 0) > 0.8) score += 0.15;
+
+    return Math.min(1.0, Math.max(0.0, parseFloat(score.toFixed(2))));
+};
+
+// Step 5: Identify CDEs — derived from real profile columns when available
 const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
-    const [columns] = useState([
-        { name: 'customer_id', type: 'string', importance: 0.95, selected: true },
-        { name: 'email', type: 'string', importance: 0.88, selected: true },
-        { name: 'purchase_amount', type: 'numeric', importance: 0.92, selected: true },
-        { name: 'created_date', type: 'date', importance: 0.75, selected: false },
-        { name: 'status', type: 'categorical', importance: 0.82, selected: true },
-        { name: 'region', type: 'categorical', importance: 0.65, selected: false },
-    ]);
+    const FALLBACK_COLUMNS = [
+        { name: 'customer_id', type: 'categorical', importance: 0.95, selected: true, null_rate: 0, unique_count: null },
+        { name: 'email', type: 'categorical', importance: 0.88, selected: true, null_rate: 0, unique_count: null },
+        { name: 'purchase_amount', type: 'numeric', importance: 0.92, selected: true, null_rate: 0, unique_count: null },
+        { name: 'created_date', type: 'datetime', importance: 0.75, selected: false, null_rate: 0, unique_count: null },
+        { name: 'status', type: 'categorical', importance: 0.82, selected: true, null_rate: 0, unique_count: null },
+        { name: 'region', type: 'categorical', importance: 0.65, selected: false, null_rate: 0, unique_count: null },
+    ];
+
+    const buildColumns = () => {
+        const allCols = workflowData.analysis?.allColumns || [];
+        if (allCols.length === 0) return FALLBACK_COLUMNS;
+        return allCols.map(col => {
+            const imp = computeImportance(col);
+            return {
+                name: col.name,
+                type: col.data_type,
+                importance: imp,
+                selected: imp >= 0.75,
+                null_rate: col.null_rate,
+                unique_count: col.unique_count,
+                stats: col.stats,
+            };
+        });
+    };
+
+    const [columns] = useState(buildColumns);
     const [cdeExplanation, setCdeExplanation] = useState(null);
     const [selectedColumn, setSelectedColumn] = useState(null);
 
@@ -796,11 +1174,9 @@ const IdentifyCDEsStep = ({ workflowData, setWorkflowData }) => {
 
     const showExplanation = async (columnName) => {
         setSelectedColumn(columnName);
+        const column = columns.find(c => c.name === columnName);
+        if (!column) return;
         try {
-            // Find the column data
-            const column = columns.find(c => c.name === columnName);
-            if (!column) return;
-
             const response = await fetch('http://localhost:8000/explain/cde', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1110,7 +1486,13 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                             </p>
                             {ruleExplanation.selection_criteria && (
                                 <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mb-3">
-                                    <strong>Selection Criteria:</strong> {ruleExplanation.selection_criteria}
+                                    <strong>Selection Criteria:</strong>{' '}
+                                    {typeof ruleExplanation.selection_criteria === 'string'
+                                        ? ruleExplanation.selection_criteria
+                                        : Object.entries(ruleExplanation.selection_criteria).map(([k, v]) => (
+                                            <div key={k} className="mt-1">• <strong>{k.replace(/_/g, ' ')}:</strong> {v}</div>
+                                          ))
+                                    }
                                 </div>
                             )}
                         </div>
@@ -1173,9 +1555,15 @@ const ReviewResultsStep = ({ workflowData, setWorkflowData }) => {
                         <div className="bg-white rounded-lg p-4 border border-blue-200">
                             <div className="text-sm font-semibold text-blue-900 mb-2">📊 Coverage Analysis:</div>
                             <div className="text-sm text-blue-800">
-                                {typeof ruleExplanation.coverage_analysis === 'string' 
-                                    ? ruleExplanation.coverage_analysis 
-                                    : JSON.stringify(ruleExplanation.coverage_analysis)}
+                                {typeof ruleExplanation.coverage_analysis === 'string'
+                                    ? ruleExplanation.coverage_analysis
+                                    : Object.entries(ruleExplanation.coverage_analysis).map(([k, v]) => (
+                                        <div key={k} className="mt-1">
+                                            • <strong>{k.replace(/_/g, ' ')}:</strong>{' '}
+                                            {Array.isArray(v) ? v.join(', ') : String(v)}
+                                        </div>
+                                      ))
+                                }
                             </div>
                         </div>
                     )}
@@ -1262,7 +1650,7 @@ const ExportRulesStep = ({ workflowData }) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `sentinel-dq-rules.${exportFormat}`;
+        a.download = `orian-dq-rules.${exportFormat}`;
         a.click();
     };
 

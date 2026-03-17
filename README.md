@@ -4,7 +4,7 @@
 
 **Enterprise-Grade Data Quality Management with AI-Powered Explainability**
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://reactjs.org/)
 [![W3C](https://img.shields.io/badge/W3C-DCAT%20%7C%20DQV-005A9C.svg)](https://www.w3.org/)
@@ -33,7 +33,7 @@
 
 ## 📸 Screenshots
 
-### 6-Step Workflow with AI Explanations
+### 7-Step Workflow with AI Explanations
 The intuitive workflow guides users from goal definition to rule export, with contextual AI explanations at every step.
 
 ### Interactive Dashboard
@@ -54,7 +54,7 @@ Real-time KPIs, trust heatmaps, and domain health views provide comprehensive vi
 | 🤖 **AI Explainability** | Contextual explanations for every decision | Build trust and transparency |
 | 📊 **KPI Monitoring** | Platform, domain, and goal-level metrics | Measure and improve outcomes |
 | 🔒 **Governance** | Rule lifecycle, exceptions, sign-offs | Meet regulatory requirements |
-| 🔌 **Multi-Engine Export** | Convert to Soda, GE, Pandas, dbt, Collibra | Leverage existing investments |
+| 🔌 **Multi-Engine Export** | Convert to SodaCL (YAML), Great Expectations (JSON), Pandas (Python), Collibra, dbt (YAML) | Leverage existing investments |
 | 📈 **Maturity Assessment** | 5-level progression tracking | Guide DQ transformation |
 
 ---
@@ -101,7 +101,7 @@ Real-time KPIs, trust heatmaps, and domain health views provide comprehensive vi
 *   **Multi-Channel Interaction**:
     *   **CLI**: Typer-based for CI/CD and power users
     *   **API**: FastAPI with comprehensive REST endpoints
-    *   **UI**: Modern React/Vite/Tailwind interface with 6-step workflow
+    *   **UI**: Modern React/Vite/Tailwind interface with 7-step workflow
 
 ### User Experience
 
@@ -109,6 +109,8 @@ Real-time KPIs, trust heatmaps, and domain health views provide comprehensive vi
 *   **Xoriant ORIAN Branding**: Custom color themes and visual elements
 *   **Interactive Dashboards**: Real-time KPIs, trust heatmaps, domain health views
 *   **Contextual Help**: In-app explanations at every decision point
+
+> **Note:** Dashboard health scores and KPI metrics currently use simulated data for demonstration purposes. In a client deployment these are replaced with live calculations from the connected data infrastructure.
 
 ## 📂 Project Structure
 
@@ -150,7 +152,7 @@ sentinel_dq/
 ├── ui/                          # Modern React frontend
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── Workflow.jsx    # 6-step DQ workflow (NEW)
+│   │   │   ├── Workflow.jsx    # 7-step DQ workflow (NEW)
 │   │   │   ├── Dashboard.jsx   # Enhanced KPI dashboard (NEW)
 │   │   │   ├── Goals.jsx       # Goal management
 │   │   │   ├── Verify.jsx      # Quality gate verification
@@ -181,7 +183,7 @@ sentinel_dq/
 ## 💻 Quick Start
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.11+
 - Node.js 18+
 - npm or yarn
 
@@ -212,7 +214,7 @@ npm run dev
 
 **Dashboard URL**: `http://localhost:5173`
 
-### 3. Explore the 6-Step Workflow
+### 3. Explore the 7-Step Workflow
 
 The UI provides an intuitive workflow for data quality management:
 
@@ -224,7 +226,7 @@ The UI provides an intuitive workflow for data quality management:
    - 💡 Click ? icon to see why each column is critical
 5. **Review Results** - See generated DQ rules
    - 💡 Click "Show Explanations" to understand rule selection
-6. **Export Rules** - Download rules for your execution engine
+6. **Export Rules** - Download rules in your preferred format: SodaCL (YAML), Great Expectations (JSON), Pandas (Python), Collibra, dbt (YAML)
 
 ### 4. Command Line Interface (CLI)
 

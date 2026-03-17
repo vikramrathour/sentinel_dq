@@ -7,3 +7,7 @@ typer
 fastapi
 uvicorn
 numpy
+openpyxl
+lxml
+python-docx
+pdfplumber

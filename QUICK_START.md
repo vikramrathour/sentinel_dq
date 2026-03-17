@@ -3,8 +3,8 @@
 ## 🚀 Get Started in 5 Minutes
 
 ### Prerequisites
-- Python 3.13+
-- Node.js 24+
+- Python 3.11+
+- Node.js 18+
 - Git
 
 ---
@@ -138,6 +138,8 @@ Click **"Next Step"**
 - Hover over nodes to see details
 - Check health percentages
 - View recent quality checks
+
+> **⚠️ Demo Mode:** The dashboard heatmap and KPI metrics use simulated data to illustrate the platform's capabilities. In a production deployment these reflect live data quality measurements from connected datasets.
 
 ---
 
@@ -352,7 +354,7 @@ cd ui && npm run dev &
 
 # 2. Open workflow
 # 3. Upload today's data
-# 4. Follow 6 steps
+# 4. Follow 7 steps
 # 5. Export rules
 # 6. Apply to production
 ```
@@ -467,8 +469,8 @@ const steps = [
 ## ✅ Checklist
 
 Before you start, make sure you have:
-- [ ] Python 3.13+ installed
-- [ ] Node.js 24+ installed
+- [ ] Python 3.11+ installed
+- [ ] Node.js 18+ installed
 - [ ] Dependencies installed (pip + npm)
 - [ ] Both servers running
 - [ ] Browser open to `localhost:5173`
@@ -487,7 +489,7 @@ Ready? **Let's go!** 🚀
 
 You'll know everything is working when you see:
 
-✅ Workflow page loads with 6-step progress bar  
+✅ Workflow page loads with 7-step progress bar  
 ✅ Xoriant branding (navy blue colors)  
 ✅ Smooth animations and transitions  
 ✅ File upload works (drag-and-drop)  

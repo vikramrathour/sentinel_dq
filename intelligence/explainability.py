@@ -1,5 +1,5 @@
 """
-Explainability Engine for Sentinel-DQ.
+Explainability Engine for OrianDQ.
 Provides AI-powered explanations for CDE selection, rule recommendations, and quality goals.
 """
 from typing import Dict, List, Optional, Any

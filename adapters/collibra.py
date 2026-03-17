@@ -13,6 +13,6 @@ def to_collibra_payload(measurement: QualityMeasurement, dataset_id: str) -> Dic
         "timestamp": measurement.timestamp.isoformat(),
         "dimension": measurement.dimension,
         "targetResourceId": dataset_id,
-        "sourceSystem": "Sentinel-DQ",
+        "sourceSystem": "OrianDQ",
         "status": measurement.status.value
     }

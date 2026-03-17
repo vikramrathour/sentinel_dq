@@ -5,7 +5,7 @@ from rules.schema import load_rules, CheckType
 from storage.persistence import save_metadata, load_metadata
 
 def main():
-    print("Starting Sentinel-DQ verification...")
+    print("Starting OrianDQ verification...")
 
     # 1. Create a Dataset
     dataset = Dataset(

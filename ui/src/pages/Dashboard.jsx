@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, TrendingUp, AlertCircle, CheckCircle, Database, Network } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Activity, TrendingUp, AlertCircle, CheckCircle, Database, Network, RefreshCw } from 'lucide-react';
 
 const Dashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    useEffect(() => {
+    const loadData = useCallback(() => {
+        setLoading(true);
+        setError(null);
         fetch('/v1/dashboard')
             .then(res => res.json())
             .then(data => {
@@ -13,27 +16,84 @@ const Dashboard = () => {
                 setLoading(false);
             })
             .catch(err => {
-                console.error(err);
+                setError('Failed to load dashboard data. Please try again.');
                 setLoading(false);
             });
     }, []);
 
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading dashboard...</p>
+            <div className="space-y-6" role="status" aria-live="polite">
+                {/* Skeleton Header */}
+                <div>
+                    <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-2"></div>
+                    <div className="h-4 w-80 bg-gray-200 rounded animate-pulse"></div>
                 </div>
+
+                {/* Skeleton Metric Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="bg-white rounded-xl shadow-md p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="w-12 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+                                <div className="w-12 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            </div>
+                            <div className="h-8 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+                            <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Skeleton Heatmap */}
+                <div className="bg-white rounded-xl shadow-md p-6">
+                    <div className="mb-6">
+                        <div className="h-6 w-36 bg-gray-200 rounded animate-pulse mb-2"></div>
+                        <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div key={i} className="bg-gray-200 rounded-lg h-24 animate-pulse"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm border border-red-200 p-8 text-center">
+                <AlertCircle size={40} className="mx-auto text-red-500 mb-4" />
+                <h2 className="font-bold text-gray-900 text-lg mb-2">Unable to load dashboard</h2>
+                <p className="text-gray-600 text-sm mb-6">{error}</p>
+                <button
+                    onClick={loadData}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition"
+                >
+                    <RefreshCw size={16} />
+                    Retry
+                </button>
             </div>
         );
     }
 
     if (!data) {
         return (
-            <div className="text-center py-12">
-                <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">Unable to load dashboard data</p>
+            <div className="bg-white rounded-xl shadow-sm border border-red-200 p-8 text-center">
+                <AlertCircle size={40} className="mx-auto text-red-500 mb-4" />
+                <h2 className="font-bold text-gray-900 text-lg mb-2">Unable to load dashboard</h2>
+                <p className="text-gray-600 text-sm mb-6">No data available. Please try again.</p>
+                <button
+                    onClick={loadData}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition"
+                >
+                    <RefreshCw size={16} />
+                    Retry
+                </button>
             </div>
         );
     }
@@ -144,7 +204,10 @@ const MetricCard = ({ title, value, icon: Icon, color, trend }) => {
     return (
         <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
             <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`}>
+                <div
+                    aria-hidden="true"
+                    className={`w-12 h-12 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`}
+                >
                     <Icon size={24} className="text-white" />
                 </div>
                 {trend && (

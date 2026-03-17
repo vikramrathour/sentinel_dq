@@ -36,7 +36,7 @@ const TrustHeatmap = () => {
 
     return (
         <div className="p-4">
-            <h2 className="text-xl font-bold mb-4">Sentinel-DQ Trust Heatmap</h2>
+            <h2 className="text-xl font-bold mb-4">OrianDQ Trust Heatmap</h2>
 
             {/* Summary Stats */}
             <div className="flex gap-4 mb-6">

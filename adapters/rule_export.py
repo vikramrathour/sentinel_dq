@@ -15,7 +15,7 @@ from core.models_enhanced import RuleDefinition, QualityGoal, Severity
 
 class RuleExporter:
     """
-    Exports Sentinel-DQ rules to various execution engines.
+    Exports OrianDQ rules to various execution engines.
     Key IP: Write once, export to multiple tools.
     """
     
@@ -130,7 +130,7 @@ class RuleExporter:
             "expectation_suite_name": f"{dataset_name}_suite",
             "data_asset_type": "Dataset",
             "meta": {
-                "generated_by": "Sentinel-DQ",
+                "generated_by": "OrianDQ",
                 "quality_goals": list(set(r.goal.value for r in self.rules))
             },
             "expectations": expectations
@@ -152,7 +152,7 @@ class RuleExporter:
         ```
         """
         code_lines = [
-            "# Sentinel-DQ Rules - Pandas Implementation",
+            "# OrianDQ Rules - Pandas Implementation",
             "# Generated automatically - do not edit manually",
             "import pandas as pd",
             "import numpy as np",
@@ -230,7 +230,7 @@ class RuleExporter:
                 "severity": rule.severity.value,
                 "targetColumn": rule.column,
                 "qualityGoal": rule.goal.value,
-                "createdBy": rule.created_by or "Sentinel-DQ",
+                "createdBy": rule.created_by or "OrianDQ",
                 "state": rule.state.value
             }
             
@@ -312,7 +312,7 @@ class RuleExporter:
         return yaml.dump(dbt_yaml, default_flow_style=False)
     
     def _map_dimension_to_collibra(self, dimension: str) -> str:
-        """Map Sentinel-DQ dimensions to Collibra rule types."""
+        """Map OrianDQ dimensions to Collibra rule types."""
         mapping = {
             "Completeness": "COMPLETENESS",
             "Validity": "VALIDITY",
